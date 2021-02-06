@@ -17,19 +17,15 @@
 # under the License.
 #
 
-exports_files(["VERSION", "LICENSE", "README.md"])
+load("@graknlabs_dependencies//distribution/artifact:rules.bzl", "native_artifact_files")
+load("@graknlabs_dependencies//distribution:deployment.bzl", "deployment", "deployment_private")
 
-java_library(
-    name = "migrator-src",
-    srcs = glob(["*.java"]),
-    deps = [
-        "@graknlabs_client_java//:client-java",
-    ],
-)
-
-java_binary(
-    name = "migrator",
-    main_class = "biograkn.semmed.Migrator",
-    runtime_deps = [":migrator-src"],
-    tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
-)
+def graknlabs_grakn_core_artifacts():
+    native_artifact_files(
+        name = "graknlabs_grakn_core_artifact",
+        group_name = "graknlabs_grakn_core",
+        artifact_name = "grakn-core-server-{platform}-{version}.{ext}",
+        tag_source = deployment["artifact.release"],
+        commit_source = deployment["artifact.snapshot"],
+        tag = "2.0.0-alpha-5",
+    )

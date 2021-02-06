@@ -17,19 +17,4 @@
 # under the License.
 #
 
-exports_files(["VERSION", "LICENSE", "README.md"])
-
-java_library(
-    name = "migrator-src",
-    srcs = glob(["*.java"]),
-    deps = [
-        "@graknlabs_client_java//:client-java",
-    ],
-)
-
-java_binary(
-    name = "migrator",
-    main_class = "biograkn.semmed.Migrator",
-    runtime_deps = [":migrator-src"],
-    tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
-)
+exports_files(["biograkn-semmed.gql"])
