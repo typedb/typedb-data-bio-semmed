@@ -17,6 +17,8 @@
 # under the License.
 #
 
+load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
+
 exports_files(["VERSION", "LICENSE", "README.md"])
 
 java_library(
@@ -24,6 +26,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "@graknlabs_client_java//:client-java",
+        "@maven//:org_slf4j_slf4j_api",
     ],
 )
 
@@ -32,4 +35,12 @@ java_binary(
     main_class = "biograkn.semmed.Migrator",
     runtime_deps = [":migrator-src"],
     tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
+    resources = [ "//conf:logback.xml" ],
+    resource_strip_prefix = "conf/",
+)
+
+checkstyle_test(
+    name = "checkstyle",
+    include = glob(["*", ".grabl/*"]),
+    license_type = "agpl",
 )

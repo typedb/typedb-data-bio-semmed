@@ -19,10 +19,10 @@
 
 load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 
-exports_files(["biograkn-semmed.gql"])
+exports_files(["logback.xml"])
 
 checkstyle_test(
     name = "checkstyle",
     include = glob(["*"]),
-    license_type = "agpl",
+    license_type = "apache",
 )
