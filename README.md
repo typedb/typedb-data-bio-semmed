@@ -1,1 +1,1 @@
-# biograkn-semmed
+# BioGrakn SemMedDB Dataset
