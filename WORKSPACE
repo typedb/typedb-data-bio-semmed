@@ -112,6 +112,7 @@ graknlabs_grakn_core_artifacts()
 ############################
 
 load("//dependencies/maven:artifacts.bzl", graknlabs_biograkn_semmed_artifacts = "artifacts")
+load("@graknlabs_dependencies//tool/common:deps.bzl", graknlabs_dependencies_tool_common_artifacts = "maven_artifacts")
 load("@graknlabs_common//dependencies/maven:artifacts.bzl", graknlabs_common_artifacts = "artifacts")
 load("@graknlabs_client_java//dependencies/maven:artifacts.bzl", graknlabs_client_java_artifacts = "artifacts")
 load("@graknlabs_graql//dependencies/maven:artifacts.bzl", graknlabs_graql_artifacts = "artifacts")
@@ -121,6 +122,7 @@ load("@graknlabs_grabl_tracing//dependencies/maven:artifacts.bzl", graknlabs_gra
 load("@graknlabs_dependencies//library/maven:rules.bzl", "maven")
 maven(
     graknlabs_biograkn_semmed_artifacts +
+    graknlabs_dependencies_tool_common_artifacts +
     graknlabs_common_artifacts +
     graknlabs_client_java_artifacts +
     graknlabs_graql_artifacts +
