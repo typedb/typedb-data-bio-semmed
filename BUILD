@@ -25,7 +25,12 @@ java_library(
     name = "migrator-src",
     srcs = glob(["*.java"]),
     deps = [
+        # External dependencies from Grakn Labs
         "@graknlabs_client_java//:client-java",
+        "@graknlabs_graql//java/query:query",
+        "@graknlabs_graql//java:graql",
+
+        # External dependencies from Maven
         "@maven//:org_slf4j_slf4j_api",
     ],
 )
@@ -36,6 +41,7 @@ java_binary(
     runtime_deps = [":migrator-src"],
     tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
     resources = [ "//conf:logback.xml" ],
+    data = ["//schema:biograkn-semmed.gql"],
     resource_strip_prefix = "conf/",
 )
 

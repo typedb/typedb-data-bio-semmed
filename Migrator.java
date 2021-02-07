@@ -20,24 +20,51 @@
 package biograkn.semmed;
 
 import grakn.client.GraknClient;
+import graql.lang.Graql;
+import graql.lang.query.GraqlDefine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 
+import static grakn.client.GraknClient.Session.Type.SCHEMA;
+import static grakn.client.GraknClient.Transaction.Type.WRITE;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class Migrator {
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
+    private static final String DATABASE_NAME = "biograkn-semmed";
+    private static final String SCHEMA_FILE = "schema/biograkn-semmed.gql";
 
-    private final GraknClient address;
-    private final File data;
+    private final GraknClient client;
+    private final File source;
 
-    public Migrator(GraknClient client, File data) {
-        this.address = client;
-        this.data = data;
+    public Migrator(GraknClient client, File source) {
+        this.client = client;
+        this.source = source;
+    }
+
+    private void validate() {
+        if (client.databases().contains(DATABASE_NAME)) {
+            throw new RuntimeException("There already exists a database with the name '" + DATABASE_NAME + "'");
+        }
+    }
+
+    private void initialise() throws IOException {
+        client.databases().create(DATABASE_NAME);
+        try (GraknClient.Session session = client.session(DATABASE_NAME, SCHEMA)) {
+            try (GraknClient.Transaction transaction = session.transaction(WRITE)) {
+                GraqlDefine schema = Graql.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_FILE)), UTF_8));
+                transaction.query().define(schema);
+                transaction.commit();
+            }
+        }
     }
 
     private void run() {
@@ -53,20 +80,23 @@ public class Migrator {
 
     public static void main(String[] args) {
         try {
-            if (args.length != 2) throw new RuntimeException("Two arguments are required: {data_path} {grakn_address}");
-            File data = Paths.get(args[0]).toFile();
+            if (args.length != 2) throw new RuntimeException("Two arguments are required: {source_path} {grakn_address}");
+            File source = Paths.get(args[0]).toFile();
             String address = args[1];
-            if (!data.isDirectory()) {
-                throw new RuntimeException("Invalid data directory: " + data.toString());
+            if (!source.isDirectory()) {
+                throw new RuntimeException("Invalid data directory: " + source.toString());
             } else {
-                LOG.info("Data directory : {}", data.toString());
+                LOG.info("Source directory : {}", source.toString());
                 LOG.info("Grakn address  : {}", address);
             }
 
             Instant start = Instant.now();
-            GraknClient client = GraknClient.core(address);
-            Migrator migrator = new Migrator(client, data);
-            migrator.run();
+            try (GraknClient client = GraknClient.core(address)) {
+                Migrator migrator = new Migrator(client, source);
+                migrator.validate();
+                migrator.initialise();
+                migrator.run();
+            }
             Instant end = Instant.now();
 
             LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
