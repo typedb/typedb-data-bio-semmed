@@ -19,4 +19,90 @@
 
 define
 
-concept sub entity;
+id sub attribute, value long;
+pmid sub attribute, value long;
+cui sub attribute, value string;
+name sub attribute, value string;
+issn sub attribute, value string;
+dp sub attribute, value datetime;
+edat sub attribute, value datetime;
+pyear sub attribute, value long;
+type_ sub attribute, value string;
+number sub attribute, value long;
+text sub attribute, value string;
+section-header sub attribute, value string;
+normalized-section-header sub attribute, value string;
+start-index sub attribute, value long;
+end-index sub attribute, value long;
+score sub attribute, value long;
+gene-id sub attribute, value long;
+gene-name sub attribute, value string;
+predicate sub attribute, value string;
+subject-semptype sub attribute, value string;
+subject-novelty sub attribute, value string;
+object-semtype sub attribute, value string;
+object-novelty sub attribute, value string;
+
+concept sub entity,
+  owns id @key,
+  owns cui @key,
+  owns name,
+  plays conception:concept,
+  plays predication:subject,
+  plays predication:object;
+
+# TODO: should we consider modeling 'gene' as its own entity?
+entity_ sub entity,
+  owns id,
+  owns name,
+  owns type_,
+  owns text,
+  owns gene-id,
+  owns gene-name,
+  owns start-index,
+  owns end-index,
+  owns score,
+  plays conception:entity_,
+  plays extraction:entity_;
+
+citation sub entity,
+  owns pmid @key,
+  owns issn,
+  owns dp,
+  owns edat,
+  owns pyear,
+  plays reference:citation;
+
+sentence sub entity,
+  owns id @key,
+  owns type_,
+  owns number,
+  owns text,
+  owns section-header,
+  owns normalized-section-header,
+  plays reference:sentence,
+  plays extraction:sentence,
+  plays predication:sentence;
+
+conception sub relation,
+  relates concept,
+  relates entity_;
+
+extraction sub relation,
+  relates sentence,
+  relates entity_;
+
+reference sub relation,
+  relates citation,
+  relates sentence;
+
+# TODO: should we consider modeling 'subject' and 'object' as its own 'occurence' entity?
+predication sub relation,
+  relates sentence,
+  relates subject,
+  relates object,
+  owns predicate,
+  owns subject-semptype,
+  owns subject-novelty,
+  owns object-semtype,
+  owns object-novelty;
