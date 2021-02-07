@@ -22,9 +22,7 @@ config:
   dependencies:
     dependencies: [build]
     common: [build, release]
-    graql: [build, release]
-    protocol: [build, release]
-    grabl-tracing: [build, release]
+    client-java: [build, release]
 
 build:
   quality:
