@@ -23,9 +23,10 @@ exports_files(["VERSION", "LICENSE", "README.md"])
 
 java_library(
     name = "migrator-src",
-    srcs = glob(["*.java"]),
+    srcs = glob(["*.java", "loader/*.java"]),
     deps = [
         # External dependencies from Grakn Labs
+        "@graknlabs_common//:common",
         "@graknlabs_client_java//:client-java",
         "@graknlabs_graql//java/query:query",
         "@graknlabs_graql//java:graql",
@@ -47,6 +48,6 @@ java_binary(
 
 checkstyle_test(
     name = "checkstyle",
-    include = glob(["*", ".grabl/*"]),
+    include = glob(["*", ".grabl/*", "loader/*"]),
     license_type = "apache",
 )
