@@ -48,5 +48,5 @@ java_binary(
 checkstyle_test(
     name = "checkstyle",
     include = glob(["*", ".grabl/*"]),
-    license_type = "agpl",
+    license_type = "apache",
 )

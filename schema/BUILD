@@ -24,5 +24,5 @@ exports_files(["biograkn-semmed.gql"])
 checkstyle_test(
     name = "checkstyle",
     include = glob(["*"]),
-    license_type = "agpl",
+    license_type = "apache",
 )
