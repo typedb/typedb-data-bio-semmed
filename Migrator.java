@@ -64,6 +64,7 @@ public class Migrator {
     }
 
     private void validate() {
+        // TODO: validate SRC_SENTENCES_CSV and SRC_ENTITIES_CSV exists
         list(SRC_CONCEPTS_CSV, SRC_CITATIONS_CSV, SRC_PREDICATIONS_CSV).forEach(sourceFile -> {
             if (!source.resolve(sourceFile).toFile().isFile()) {
                 throw new RuntimeException("Expected " + sourceFile + " file is missing.");
