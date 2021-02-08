@@ -20,11 +20,29 @@
 package biograkn.semmed.writer;
 
 import grakn.client.GraknClient;
+import graql.lang.query.GraqlInsert;
+
+import java.util.Arrays;
+
+import static biograkn.semmed.Migrator.debug;
+import static graql.lang.Graql.insert;
+import static graql.lang.Graql.var;
 
 public class ConceptsWriter {
 
     public static void write(GraknClient.Transaction tx, String[] csv) {
+        assert csv.length == 3;
+        if (csv[0] == null) throw new RuntimeException("Null Concept ID in csv: " + Arrays.toString(csv));
+        if (csv[1] == null) throw new RuntimeException("Null Concept CUID in csv: " + Arrays.toString(csv));
 
-        // TODO
+        int id = Integer.parseInt(csv[0]);
+        String cuid = csv[1];
+        String name = csv[2];
+
+        GraqlInsert query = insert(
+                var().isa("concept").has("id", id).has("cui", cuid).has("name", name)
+        );
+        debug("concept-writer: {}", query);
+        tx.query().insert(query);
     }
 }
