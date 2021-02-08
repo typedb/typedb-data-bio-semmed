@@ -23,6 +23,7 @@ import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
 import biograkn.semmed.writer.PredicationsWriter;
 import grakn.client.GraknClient;
+import grakn.common.collection.Either;
 import grakn.common.concurrent.NamedThreadFactory;
 import graql.lang.Graql;
 import graql.lang.query.GraqlDefine;
@@ -39,8 +40,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiConsumer;
 
 import static grakn.client.GraknClient.Session.Type.DATA;
@@ -69,13 +76,19 @@ public class Migrator {
     private final GraknClient client;
     private final Path source;
     private final int parallelisation;
+    private final int batch;
 
-    public Migrator(GraknClient client, Path source, int parallelisation) {
+    public Migrator(GraknClient client, Path source, int parallelisation, int batch) {
         assert parallelisation < Runtime.getRuntime().availableProcessors();
         this.client = client;
         this.source = source;
         this.parallelisation = parallelisation;
+        this.batch = batch;
         executor = Executors.newFixedThreadPool(parallelisation + 1, new NamedThreadFactory(DATABASE_NAME));
+    }
+
+    private static class Done {
+        private static final Done INSTANCE = new Done();
     }
 
     private void validate() {
@@ -103,19 +116,80 @@ public class Migrator {
 
     private void run() throws FileNotFoundException {
         try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
-            parallelisedWrite(session, SRC_CONCEPTS_CSV, ConceptsWriter::write);
-            parallelisedWrite(session, SRC_CITATIONS_CSV, CitationsWriter::write);
+            asyncMigrate(session, SRC_CONCEPTS_CSV, ConceptsWriter::write);
+            asyncMigrate(session, SRC_CITATIONS_CSV, CitationsWriter::write);
             // parallelisedWrite(session, SRC_SENTENCES_CSV, SentencesWriter::write);
-            parallelisedWrite(session, SRC_PREDICATIONS_CSV, PredicationsWriter::write);
-            parallelisedWrite(session, SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write);
+            asyncMigrate(session, SRC_PREDICATIONS_CSV, PredicationsWriter::write);
+            asyncMigrate(session, SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write);
             // parallelisedWrite(session, SRC_ENTITIES_CSV, EntitiesWriter::write);
         }
     }
 
-    private void parallelisedWrite(GraknClient.Session session, String csvName,
-                                   BiConsumer<GraknClient.Transaction, String[]> writerFn) throws FileNotFoundException {
+    private void asyncMigrate(GraknClient.Session session, String csvName,
+                              BiConsumer<GraknClient.Transaction, String[]> writerFn) throws FileNotFoundException {
+        LOG.debug("async-migrate: {}", csvName);
         BufferedReader reader = newReader(csvName);
-        // TODO
+        LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
+        asyncRead(reader, queue);
+        List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
+        for (int i = 0; i < parallelisation; i++) asyncWrites.add(asyncWrite(i + 1, session, queue, writerFn));
+        CompletableFuture.allOf(asyncWrites.toArray(new CompletableFuture[0])).join();
+    }
+
+    private void asyncRead(BufferedReader reader, LinkedBlockingQueue<Either<List<String[]>, Done>> queue) {
+        executor.submit(() -> {
+            try {
+                Iterator<String> iterator = reader.lines().iterator();
+                ArrayList<String[]> csvLines = new ArrayList<>(batch);
+                while (iterator.hasNext()) {
+                    String[] csv = parseCSV(iterator.next());
+                    LOG.debug("async-read: {}", Arrays.toString(csv));
+                    csvLines.add(csv);
+                    if (csvLines.size() == batch) {
+                        queue.put(Either.first(csvLines));
+                        csvLines = new ArrayList<>(batch);
+                    }
+                }
+                queue.put(Either.second(Done.INSTANCE));
+            } catch (InterruptedException e) {
+                LOG.error(e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private CompletableFuture<Void> asyncWrite(int id, GraknClient.Session session,
+                                               LinkedBlockingQueue<Either<List<String[]>, Done>> queue,
+                                               BiConsumer<GraknClient.Transaction, String[]> writerFn) {
+        return CompletableFuture.runAsync(() -> {
+            Either<List<String[]>, Done> queueItem;
+            try {
+                while ((queueItem = queue.take()).isFirst()) {
+                    try (GraknClient.Transaction tx = session.transaction(WRITE)) {
+                        List<String[]> csvLines = queueItem.first();
+                        csvLines.forEach(csv -> {
+                            LOG.debug("async-writer-{}: {}", id, Arrays.toString(csv));
+                            writerFn.accept(tx, csv);
+                        });
+                        tx.commit();
+                    }
+                }
+                assert queueItem.isSecond();
+                queue.put(queueItem);
+            } catch (InterruptedException e) {
+                LOG.error(e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
+        }, executor);
+    }
+
+    private String[] parseCSV(String line) {
+        String[] vals = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (int i = 0; i < vals.length; i++) {
+            assert !vals[i].equals("NULL");
+            if (vals[i].equals("\\N")) vals[i] = null;
+        }
+        return vals;
     }
 
     private BufferedReader newReader(String csvName) throws FileNotFoundException {
@@ -137,6 +211,8 @@ public class Migrator {
                 throw new RuntimeException("Invalid data directory: " + options.source().toString());
             } else if (!(options.parallelisation() > 0 && options.parallelisation() <= PARALLELISATION_MAX)) {
                 throw new RuntimeException("Invalid parallelisation config: has to be greater than 0 and less than CPU cores");
+            } else if (options.batch() <= 0) {
+                throw new RuntimeException("Invalid batch size: has to be larger than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
                 LOG.info("Grakn address    : {}", options.grakn());
@@ -147,7 +223,7 @@ public class Migrator {
 
             Instant start = Instant.now();
             try (GraknClient client = GraknClient.core(options.grakn())) {
-                Migrator migrator = new Migrator(client, options.source(), options.parallelisation());
+                Migrator migrator = new Migrator(client, options.source(), options.parallelisation(), options.batch());
                 migrator.validate();
                 migrator.initialise();
                 migrator.run();
