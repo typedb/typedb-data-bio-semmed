@@ -34,7 +34,7 @@ under the License.
     WARN:  (Unexpected events that are not recommended to have happened)
     ERROR: (Incorrect events that disrupts the server operation, against user expectation)
     -->
-    <root level="debug">
+    <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

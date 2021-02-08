@@ -19,6 +19,7 @@
 
 package biograkn.semmed;
 
+import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
 import grakn.client.GraknClient;
 import grakn.common.collection.Either;
@@ -36,6 +37,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -68,6 +70,8 @@ public class Migrator {
     private static final String SRC_PREDICATIONS_CSV = "PREDICATION.csv";
     private static final String SRC_PREDICATIONS_AUX_CSV = "PREDICATION_AUX.csv";
     private static final String SRC_ENTITIES_CSV = "ENTITY.csv";
+    private static final DecimalFormat countFormat = new DecimalFormat("#,###");
+    private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
 
 
     private final ExecutorService executor;
@@ -119,7 +123,7 @@ public class Migrator {
     private void run() throws FileNotFoundException {
         try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
             asyncMigrate(session, SRC_CONCEPTS_CSV, ConceptsWriter::write);
-            // asyncMigrate(session, SRC_CITATIONS_CSV, CitationsWriter::write);
+            asyncMigrate(session, SRC_CITATIONS_CSV, CitationsWriter::write);
             // parallelisedWrite(session, SRC_SENTENCES_CSV, SentencesWriter::write);
             // asyncMigrate(session, SRC_PREDICATIONS_CSV, PredicationsWriter::write);
             // asyncMigrate(session, SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write);
@@ -127,37 +131,50 @@ public class Migrator {
         }
     }
 
-    private void asyncMigrate(GraknClient.Session session, String csvName,
+    private void asyncMigrate(GraknClient.Session session, String filename,
                               BiConsumer<GraknClient.Transaction, String[]> writerFn) throws FileNotFoundException {
-        debug("async-migrate: {}", csvName);
-        BufferedReader reader = newReader(csvName);
+        info("async-migrate: {}", filename);
         LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
-        asyncRead(reader, queue);
+        asyncRead(newReader(filename), queue, filename);
         List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
         for (int i = 0; i < parallelisation; i++) asyncWrites.add(asyncWrite(i + 1, session, queue, writerFn));
         CompletableFuture.allOf(asyncWrites.toArray(new CompletableFuture[0])).join();
     }
 
-    private void asyncRead(BufferedReader reader, LinkedBlockingQueue<Either<List<String[]>, Done>> queue) {
+    private void asyncRead(BufferedReader reader, LinkedBlockingQueue<Either<List<String[]>, Done>> queue, String filename) {
         executor.submit(() -> {
             try {
                 Iterator<String> iterator = reader.lines().iterator();
                 ArrayList<String[]> csvLines = new ArrayList<>(batch);
+                int i = 0;
+                Instant start_10_000 = Instant.now();
                 while (iterator.hasNext()) {
+                    i++;
                     String[] csv = parseCSV(iterator.next());
-                    debug("async-read: {}", Arrays.toString(csv));
+                    debug("async-read (line {}): {}", i, Arrays.toString(csv));
                     csvLines.add(csv);
                     if (csvLines.size() == batch) {
                         queue.put(Either.first(csvLines));
                         csvLines = new ArrayList<>(batch);
                     }
+                    if (i % 10_000 == 0) {
+                        Instant end_10_000 = Instant.now();
+                        double rate = (double) 10_000 * Duration.ofSeconds(1).toMillis() / Duration.between(start_10_000, end_10_000).toMillis();
+                        info("async-read {source: {}, progress: {}, rate: {}/s}", filename, countFormat.format(i), decimalFormat.format(rate));
+                        start_10_000 = Instant.now();
+                    }
                 }
+                info("async-read (total): {}", countFormat.format(i));
                 queue.put(Either.second(Done.INSTANCE));
             } catch (InterruptedException e) {
                 LOG.error(e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private void info(String message, Object... objects) {
+        LOG.info(message, objects);
     }
 
     private CompletableFuture<Void> asyncWrite(int id, GraknClient.Session session,
