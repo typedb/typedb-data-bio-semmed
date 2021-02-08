@@ -17,15 +17,13 @@
  * under the License.
  */
 
-package biograkn.semmed.loader;
+package biograkn.semmed.writer;
 
 import grakn.client.GraknClient;
 
-import java.io.File;
+public class SentencesWriter {
 
-public class EntitiesLoader {
-
-    public static void load(GraknClient.Session session, File entitiesCSV) {
+    public static void write(GraknClient.Transaction tx, String[] csv) {
         // TODO
     }
 }

@@ -23,7 +23,7 @@ exports_files(["VERSION", "LICENSE", "README.md"])
 
 java_library(
     name = "migrator-src",
-    srcs = glob(["*.java", "loader/*.java"]),
+    srcs = glob(["*.java", "writer/*.java"]),
     deps = [
         # External dependencies from Grakn Labs
         "@graknlabs_common//:common",
@@ -32,6 +32,7 @@ java_library(
         "@graknlabs_graql//java:graql",
 
         # External dependencies from Maven
+        "@maven//:info_picocli_picocli",
         "@maven//:org_slf4j_slf4j_api",
     ],
 )
