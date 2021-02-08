@@ -36,11 +36,11 @@ public class ConceptsWriter {
         if (csv[1] == null) throw new RuntimeException("Null Concept CUID in csv: " + Arrays.toString(csv));
 
         int id = Integer.parseInt(csv[0]);
-        String cuid = csv[1];
+        String cui = csv[1];
         String name = csv[2];
 
         GraqlInsert query = insert(
-                var().isa("concept").has("id", id).has("cui", cuid).has("name", name)
+                var().isa("concept").has("id", id).has("cui", cui).has("name", name)
         );
         debug("concept-writer: {}", query);
         tx.query().insert(query);

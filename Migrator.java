@@ -59,14 +59,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class Migrator {
 
     public static final int BATCH_SIZE = 32;
-    public static final int PARALLELISATION_MAX = Runtime.getRuntime().availableProcessors() - 1;
+    public static final int PARALLELISATION_MAX = Runtime.getRuntime().availableProcessors();
     public static final String DATABASE_NAME = "biograkn-semmed";
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
     private static final String SCHEMA_GQL = "schema/biograkn-semmed.gql";
     private static final String SRC_CONCEPTS_CSV = "GENERIC_CONCEPT.csv";
     private static final String SRC_CITATIONS_CSV = "CITATIONS.csv";
-    private static final String SRC_SENTENCES_CSV = "SENTENCES.csv";
+    private static final String SRC_SENTENCES_CSV = "SENTENCE.csv";
     private static final String SRC_PREDICATIONS_CSV = "PREDICATION.csv";
     private static final String SRC_PREDICATIONS_AUX_CSV = "PREDICATION_AUX.csv";
     private static final String SRC_ENTITIES_CSV = "ENTITY.csv";
@@ -86,7 +86,7 @@ public class Migrator {
         this.source = source;
         this.parallelisation = parallelisation;
         this.batch = batch;
-        executor = Executors.newFixedThreadPool(parallelisation + 1, new NamedThreadFactory(DATABASE_NAME));
+        executor = Executors.newFixedThreadPool(parallelisation, new NamedThreadFactory(DATABASE_NAME));
     }
 
     private static class Done {
@@ -97,9 +97,14 @@ public class Migrator {
         if (LOG.isDebugEnabled()) LOG.debug(message, objects);
     }
 
+    public void info(String message, Object... objects) {
+        LOG.info(message, objects);
+    }
+
     private void validate() {
         // TODO: validate SRC_SENTENCES_CSV and SRC_ENTITIES_CSV exists
-        list(SRC_CONCEPTS_CSV, SRC_CITATIONS_CSV, SRC_PREDICATIONS_CSV, SRC_PREDICATIONS_AUX_CSV).forEach(file -> {
+        list(SRC_CONCEPTS_CSV, SRC_CITATIONS_CSV, SRC_SENTENCES_CSV,
+             SRC_PREDICATIONS_CSV, SRC_PREDICATIONS_AUX_CSV).forEach(file -> {
             if (!source.resolve(file).toFile().isFile()) {
                 throw new RuntimeException("Expected " + file + " file is missing.");
             }
@@ -120,7 +125,7 @@ public class Migrator {
         }
     }
 
-    private void run() throws FileNotFoundException {
+    private void run() throws FileNotFoundException, InterruptedException {
         try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
             asyncMigrate(session, SRC_CONCEPTS_CSV, ConceptsWriter::write);
             asyncMigrate(session, SRC_CITATIONS_CSV, CitationsWriter::write);
@@ -132,49 +137,14 @@ public class Migrator {
     }
 
     private void asyncMigrate(GraknClient.Session session, String filename,
-                              BiConsumer<GraknClient.Transaction, String[]> writerFn) throws FileNotFoundException {
+                              BiConsumer<GraknClient.Transaction, String[]> writerFn)
+            throws FileNotFoundException, InterruptedException {
         info("async-migrate: {}", filename);
         LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
-        asyncRead(newReader(filename), queue, filename);
         List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
         for (int i = 0; i < parallelisation; i++) asyncWrites.add(asyncWrite(i + 1, session, queue, writerFn));
+        bufferedRead(filename, queue);
         CompletableFuture.allOf(asyncWrites.toArray(new CompletableFuture[0])).join();
-    }
-
-    private void asyncRead(BufferedReader reader, LinkedBlockingQueue<Either<List<String[]>, Done>> queue, String filename) {
-        executor.submit(() -> {
-            try {
-                Iterator<String> iterator = reader.lines().iterator();
-                ArrayList<String[]> csvLines = new ArrayList<>(batch);
-                int i = 0;
-                Instant start_10_000 = Instant.now();
-                while (iterator.hasNext()) {
-                    i++;
-                    String[] csv = parseCSV(iterator.next());
-                    debug("async-read (line {}): {}", i, Arrays.toString(csv));
-                    csvLines.add(csv);
-                    if (csvLines.size() == batch) {
-                        queue.put(Either.first(csvLines));
-                        csvLines = new ArrayList<>(batch);
-                    }
-                    if (i % 10_000 == 0) {
-                        Instant end_10_000 = Instant.now();
-                        double rate = (double) 10_000 * Duration.ofSeconds(1).toMillis() / Duration.between(start_10_000, end_10_000).toMillis();
-                        info("async-read {source: {}, progress: {}, rate: {}/s}", filename, countFormat.format(i), decimalFormat.format(rate));
-                        start_10_000 = Instant.now();
-                    }
-                }
-                info("async-read (total): {}", countFormat.format(i));
-                queue.put(Either.second(Done.INSTANCE));
-            } catch (InterruptedException e) {
-                LOG.error(e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    private void info(String message, Object... objects) {
-        LOG.info(message, objects);
     }
 
     private CompletableFuture<Void> asyncWrite(int id, GraknClient.Session session,
@@ -202,6 +172,38 @@ public class Migrator {
         }, executor);
     }
 
+    private void bufferedRead(String filename, LinkedBlockingQueue<Either<List<String[]>, Done>> queue)
+            throws InterruptedException, FileNotFoundException {
+        Iterator<String> iterator = newBufferedReader(filename).lines().iterator();
+        ArrayList<String[]> csvLines = new ArrayList<>(batch);
+        int i = 0;
+        Instant start_10_000 = Instant.now();
+        while (iterator.hasNext()) {
+            i++;
+            String[] csv = parseCSV(iterator.next());
+            debug("async-read (line {}): {}", i, Arrays.toString(csv));
+            csvLines.add(csv);
+            if (csvLines.size() == batch) {
+                queue.put(Either.first(csvLines));
+                csvLines = new ArrayList<>(batch);
+            }
+            if (i % 10_000 == 0) {
+                Instant end_10_000 = Instant.now();
+                double rate = (double) 10_000 * Duration.ofSeconds(1).toMillis() /
+                        Duration.between(start_10_000, end_10_000).toMillis();
+                info("async-read {source: {}, progress: {}, rate: {}/s}",
+                     filename, countFormat.format(i), decimalFormat.format(rate));
+                start_10_000 = Instant.now();
+            }
+        }
+        info("async-read (total): {}", countFormat.format(i));
+        queue.put(Either.second(Done.INSTANCE));
+    }
+
+    private BufferedReader newBufferedReader(String csvName) throws FileNotFoundException {
+        return new BufferedReader(new InputStreamReader(new FileInputStream(source.resolve(csvName).toFile())));
+    }
+
     private String[] parseCSV(String line) {
         String[] vals = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
         for (int i = 0; i < vals.length; i++) {
@@ -211,10 +213,6 @@ public class Migrator {
             if (val.startsWith("\"") && val.endsWith("\"")) vals[i] = val.substring(1, val.length() - 1);
         }
         return vals;
-    }
-
-    private BufferedReader newReader(String csvName) throws FileNotFoundException {
-        return new BufferedReader(new InputStreamReader(new FileInputStream(source.resolve(csvName).toFile())));
     }
 
     private static String printDuration(Instant start, Instant end) {
@@ -230,8 +228,8 @@ public class Migrator {
             if (options == null) System.exit(0);
             if (!options.source().toFile().isDirectory()) {
                 throw new RuntimeException("Invalid data directory: " + options.source().toString());
-            } else if (!(options.parallelisation() > 0 && options.parallelisation() <= PARALLELISATION_MAX)) {
-                throw new RuntimeException("Invalid parallelisation config: has to be greater than 0 and less than CPU cores");
+            } else if (options.parallelisation() <= 0 || options.parallelisation() > PARALLELISATION_MAX) {
+                throw new RuntimeException("Invalid parallelisation config: has to be greater than 0 and at most the number of CPU cores");
             } else if (options.batch() <= 0) {
                 throw new RuntimeException("Invalid batch size: has to be larger than 0");
             } else {
