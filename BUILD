@@ -18,8 +18,14 @@
 #
 
 load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
+load("@graknlabs_bazel_distribution//artifact:rules.bzl", "artifact_extractor")
 
 exports_files(["VERSION", "LICENSE", "README.md"])
+
+artifact_extractor(
+    name = "grakn-core-extractor-linux",
+    artifact = "@graknlabs_grakn_core_artifact_linux//file",
+)
 
 java_library(
     name = "migrator-src",

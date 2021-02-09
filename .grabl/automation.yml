@@ -46,3 +46,51 @@ build:
         dependencies/maven/update.sh
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
+    run-grakn-core:
+      machine: 64-core-128-gb
+      image: graknlabs-ubuntu-20.04-largedisk
+      type: background
+      filter:
+        owner: graknlabs
+        branch: migrator
+      command: |
+        cat > grakn-core.service <<- EOM
+        [Unit]
+        Description=Grakn Core
+
+        [Service]
+        Type=simple
+        ExecStart=/home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/grakn server
+        Restart=on-failure
+        RestartSec=10
+        KillMode=process
+
+        [Install]
+        WantedBy=multi-user.target
+        EOM
+
+        sudo mv grakn-core.service /etc/systemd/system/
+
+        bazel run //:grakn-core-extractor-linux -- dist/grakn-core-all-linux
+        cd ./dist/grakn-core-all-linux/
+
+        sudo systemctl daemon-reload
+        sudo systemctl start grakn-core
+        export GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
+      monitor: |
+        sleep 10s
+        tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
+    run-biograkn-semmed:
+      machine: 16-core-32-gb
+      image: graknlabs-ubuntu-20.04-semmed
+      type: background
+      filter:
+        owner: graknlabs
+        branch: migrator
+      dependencies: [run-grakn-core]
+      command: |
+        bazel run //:migrator -- \
+        --source /opt/data \
+        --grakn $GRAKN_CORE_ADDRESS \
+        --parallelisation 16 \
+        --batch 64
