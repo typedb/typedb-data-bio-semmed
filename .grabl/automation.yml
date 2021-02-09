@@ -48,7 +48,7 @@ build:
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
     run-grakn-core:
       machine: 64-core-128-gb
-      image: graknlabs-ubuntu-20.04-largedisk
+      image: graknlabs-ubuntu-20.04-512-gb
       type: background
       filter:
         owner: graknlabs
@@ -81,7 +81,7 @@ build:
         sleep 10s
         tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
     run-biograkn-semmed:
-      machine: 32-core-64-gb
+      machine: 8-core-16-gb
       image: graknlabs-ubuntu-20.04-semmed
       type: background
       filter:
@@ -92,5 +92,5 @@ build:
         bazel run //:migrator -- \
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
-        --parallelisation 16 \
+        --parallelisation 64 \
         --batch 64

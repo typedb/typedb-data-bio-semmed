@@ -207,8 +207,9 @@ public class Migrator {
             if (count % 10_000 == 0) {
                 Instant endBatch = Instant.now();
                 double rate = calculateRate(10_000, startBatch, endBatch);
-                info("buffered-read {source: {}, progress: {}, rate: {}/s}",
-                     filename, countFormat.format(count), decimalFormat.format(rate));
+                double average = calculateRate(count, startRead, endBatch);
+                info("buffered-read {source: {}, progress: {}, rate: {}/s, average: {}/s}",
+                     filename, countFormat.format(count), decimalFormat.format(rate), decimalFormat.format(average));
                 startBatch = Instant.now();
             }
         }
