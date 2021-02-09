@@ -55,7 +55,7 @@ public class Options {
 
     @Option(descriptionKey = "batch",
             names = {"-b", "--batch"},
-            defaultValue = "" + Migrator.BATCH_SIZE,
+            defaultValue = "" + Migrator.DEFAULT_BATCH_SIZE,
             description = "The number of queries that a transaction should batch in one commit")
     private int batch;
 
@@ -100,7 +100,7 @@ public class Options {
     }
 
     public int parallelisation() {
-        if (parallelisation == Integer.MIN_VALUE) return Migrator.PARALLELISATION_MAX;
+        if (parallelisation == Integer.MIN_VALUE) return Migrator.DEFAULT_PARALLELISATION;
         else return parallelisation;
     }
 

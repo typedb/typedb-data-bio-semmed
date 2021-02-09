@@ -61,8 +61,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
 
-    public static final int BATCH_SIZE = 64;
-    public static final int PARALLELISATION_MAX = Runtime.getRuntime().availableProcessors();
+    public static final int DEFAULT_BATCH_SIZE = 64;
+    public static final int DEFAULT_PARALLELISATION = Runtime.getRuntime().availableProcessors();
     public static final String DATABASE_NAME = "biograkn-semmed";
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
@@ -250,10 +250,10 @@ public class Migrator {
             if (options == null) System.exit(0);
             if (!options.source().toFile().isDirectory()) {
                 throw new RuntimeException("Invalid data directory: " + options.source().toString());
-            } else if (options.parallelisation() <= 0 || options.parallelisation() > PARALLELISATION_MAX) {
-                throw new RuntimeException("Invalid parallelisation config: has to be greater than 0 and at most the number of CPU cores");
+            } else if (options.parallelisation() <= 0) {
+                throw new RuntimeException("Invalid parallelisation config: has to be greater than 0");
             } else if (options.batch() <= 0) {
-                throw new RuntimeException("Invalid batch size: has to be larger than 0");
+                throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
                 LOG.info("Grakn address    : {}", options.grakn());
