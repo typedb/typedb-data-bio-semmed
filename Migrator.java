@@ -58,7 +58,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
 
-    public static final int BATCH_SIZE = 32;
+    public static final int BATCH_SIZE = 64;
     public static final int PARALLELISATION_MAX = Runtime.getRuntime().availableProcessors();
     public static final String DATABASE_NAME = "biograkn-semmed";
 
@@ -177,27 +177,33 @@ public class Migrator {
         Iterator<String> iterator = newBufferedReader(filename).lines().iterator();
         ArrayList<String[]> csvLines = new ArrayList<>(batch);
         int i = 0;
-        Instant start_10_000 = Instant.now();
+        Instant startRead = Instant.now();
+        Instant startBatch = Instant.now();
         while (iterator.hasNext()) {
             i++;
             String[] csv = parseCSV(iterator.next());
-            debug("async-read (line {}): {}", i, Arrays.toString(csv));
+            debug("buffered-read (line {}): {}", i, Arrays.toString(csv));
             csvLines.add(csv);
             if (csvLines.size() == batch) {
                 queue.put(Either.first(csvLines));
                 csvLines = new ArrayList<>(batch);
             }
             if (i % 10_000 == 0) {
-                Instant end_10_000 = Instant.now();
-                double rate = (double) 10_000 * Duration.ofSeconds(1).toMillis() /
-                        Duration.between(start_10_000, end_10_000).toMillis();
-                info("async-read {source: {}, progress: {}, rate: {}/s}",
+                Instant endBatch = Instant.now();
+                double rate = calculateRate(10_000, startBatch, endBatch);
+                info("buffered-read {source: {}, progress: {}, rate: {}/s}",
                      filename, countFormat.format(i), decimalFormat.format(rate));
-                start_10_000 = Instant.now();
+                startBatch = Instant.now();
             }
         }
-        info("async-read (total): {}", countFormat.format(i));
+        Instant endRead = Instant.now();
+        double rate = calculateRate(i, startRead, endRead);
+        info("buffered-read {total: {}, rate: {}/s}", countFormat.format(i), decimalFormat.format(rate));
         queue.put(Either.second(Done.INSTANCE));
+    }
+
+    private double calculateRate(double count, Instant start, Instant end) {
+        return count * Duration.ofSeconds(1).toMillis() / Duration.between(start, end).toMillis();
     }
 
     private BufferedReader newBufferedReader(String csvName) throws FileNotFoundException {
@@ -243,6 +249,9 @@ public class Migrator {
             Instant start = Instant.now();
             Migrator migrator = null;
             try (GraknClient client = GraknClient.core(options.grakn())) {
+                Runtime.getRuntime().addShutdownHook(
+                        NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
+                );
                 migrator = new Migrator(client, options.source(), options.parallelisation(), options.batch());
                 migrator.validate();
                 migrator.initialise();
@@ -254,7 +263,7 @@ public class Migrator {
 
             LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
         } catch (Throwable e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             LOG.error("BioGrakn SemMed Migrator terminated with error");
             System.exit(1);
         }
