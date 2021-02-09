@@ -21,6 +21,8 @@ package biograkn.semmed.writer;
 
 import grakn.client.GraknClient;
 import graql.lang.query.GraqlInsert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
@@ -29,6 +31,8 @@ import static graql.lang.Graql.insert;
 import static graql.lang.Graql.var;
 
 public class ConceptsWriter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConceptsWriter.class);
 
     public static void write(GraknClient.Transaction tx, String[] csv) {
         assert csv.length == 3;

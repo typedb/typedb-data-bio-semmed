@@ -44,16 +44,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import static grakn.client.GraknClient.Session.Type.DATA;
 import static grakn.client.GraknClient.Session.Type.SCHEMA;
 import static grakn.client.GraknClient.Transaction.Type.WRITE;
-import static grakn.common.collection.Collections.list;
+import static grakn.common.collection.Collections.map;
+import static grakn.common.collection.Collections.pair;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
@@ -72,8 +75,18 @@ public class Migrator {
     private static final String SRC_ENTITIES_CSV = "ENTITY.csv";
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
+    private static int exitStatus = 0;
 
+    private static final Map<String, BiConsumer<GraknClient.Transaction, String[]>> SRC_CSV_WRITERS = map(
+            pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
+            pair(SRC_CITATIONS_CSV, CitationsWriter::write)
+//            pair(SRC_SENTENCES_CSV, SentencesWriter::write),
+//            pair(SRC_PREDICATIONS_CSV, PredicationsWriter::write),
+//            pair(SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write),
+//            pair(SRC_ENTITIES_CSV, EntitiesWriter::write)
+    );
 
+    private final AtomicBoolean hasError;
     private final ExecutorService executor;
     private final GraknClient client;
     private final Path source;
@@ -87,6 +100,7 @@ public class Migrator {
         this.parallelisation = parallelisation;
         this.batch = batch;
         executor = Executors.newFixedThreadPool(parallelisation, new NamedThreadFactory(DATABASE_NAME));
+        hasError = new AtomicBoolean(false);
     }
 
     private static class Done {
@@ -102,9 +116,7 @@ public class Migrator {
     }
 
     private void validate() {
-        // TODO: validate SRC_SENTENCES_CSV and SRC_ENTITIES_CSV exists
-        list(SRC_CONCEPTS_CSV, SRC_CITATIONS_CSV, SRC_SENTENCES_CSV,
-             SRC_PREDICATIONS_CSV, SRC_PREDICATIONS_AUX_CSV).forEach(file -> {
+        SRC_CSV_WRITERS.keySet().forEach(file -> {
             if (!source.resolve(file).toFile().isFile()) {
                 throw new RuntimeException("Expected " + file + " file is missing.");
             }
@@ -127,33 +139,34 @@ public class Migrator {
 
     private void run() throws FileNotFoundException, InterruptedException {
         try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
-            asyncMigrate(session, SRC_CONCEPTS_CSV, ConceptsWriter::write);
-            asyncMigrate(session, SRC_CITATIONS_CSV, CitationsWriter::write);
-            // parallelisedWrite(session, SRC_SENTENCES_CSV, SentencesWriter::write);
-            // asyncMigrate(session, SRC_PREDICATIONS_CSV, PredicationsWriter::write);
-            // asyncMigrate(session, SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write);
-            // parallelisedWrite(session, SRC_ENTITIES_CSV, EntitiesWriter::write);
+            for (Map.Entry<String, BiConsumer<GraknClient.Transaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
+                if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.getKey(), sourceCSVWriter.getValue());
+            }
         }
     }
 
     private void asyncMigrate(GraknClient.Session session, String filename,
                               BiConsumer<GraknClient.Transaction, String[]> writerFn)
             throws FileNotFoundException, InterruptedException {
-        info("async-migrate: {}", filename);
+        info("async-migrate (start): {}", filename);
         LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
         List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
-        for (int i = 0; i < parallelisation; i++) asyncWrites.add(asyncWrite(i + 1, session, queue, writerFn));
+        for (int i = 0; i < parallelisation; i++) {
+            asyncWrites.add(asyncWrite(i + 1, filename, session, queue, writerFn));
+        }
         bufferedRead(filename, queue);
         CompletableFuture.allOf(asyncWrites.toArray(new CompletableFuture[0])).join();
+        info("async-migrate (end): {}", filename);
     }
 
-    private CompletableFuture<Void> asyncWrite(int id, GraknClient.Session session,
+    private CompletableFuture<Void> asyncWrite(int id, String filename, GraknClient.Session session,
                                                LinkedBlockingQueue<Either<List<String[]>, Done>> queue,
                                                BiConsumer<GraknClient.Transaction, String[]> writerFn) {
         return CompletableFuture.runAsync(() -> {
+            debug("async-writer-{} (start): {}", id, filename);
             Either<List<String[]>, Done> queueItem;
             try {
-                while ((queueItem = queue.take()).isFirst()) {
+                while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
                     try (GraknClient.Transaction tx = session.transaction(WRITE)) {
                         List<String[]> csvLines = queueItem.first();
                         csvLines.forEach(csv -> {
@@ -163,11 +176,14 @@ public class Migrator {
                         tx.commit();
                     }
                 }
-                assert queueItem.isSecond();
-                queue.put(queueItem);
-            } catch (InterruptedException e) {
-                LOG.error(e.getMessage(), e);
+                assert queueItem.isSecond() || hasError.get();
+                if (queueItem.isSecond()) queue.put(queueItem);
+            } catch (Throwable e) {
+                hasError.set(true);
+                LOG.error("async-writer-" + id + ": " + e.getMessage());
                 throw new RuntimeException(e);
+            } finally {
+                debug("async-writer-{} (end): {}", id, filename);
             }
         }, executor);
     }
@@ -176,30 +192,30 @@ public class Migrator {
             throws InterruptedException, FileNotFoundException {
         Iterator<String> iterator = newBufferedReader(filename).lines().iterator();
         ArrayList<String[]> csvLines = new ArrayList<>(batch);
-        int i = 0;
+        int count = 0;
         Instant startRead = Instant.now();
         Instant startBatch = Instant.now();
-        while (iterator.hasNext()) {
-            i++;
+        while (iterator.hasNext() && !hasError.get()) {
+            count++;
             String[] csv = parseCSV(iterator.next());
-            debug("buffered-read (line {}): {}", i, Arrays.toString(csv));
+            debug("buffered-read (line {}): {}", count, Arrays.toString(csv));
             csvLines.add(csv);
-            if (csvLines.size() == batch) {
+            if (csvLines.size() == batch || !iterator.hasNext()) {
                 queue.put(Either.first(csvLines));
                 csvLines = new ArrayList<>(batch);
             }
-            if (i % 10_000 == 0) {
+            if (count % 10_000 == 0) {
                 Instant endBatch = Instant.now();
                 double rate = calculateRate(10_000, startBatch, endBatch);
                 info("buffered-read {source: {}, progress: {}, rate: {}/s}",
-                     filename, countFormat.format(i), decimalFormat.format(rate));
+                     filename, countFormat.format(count), decimalFormat.format(rate));
                 startBatch = Instant.now();
             }
         }
-        Instant endRead = Instant.now();
-        double rate = calculateRate(i, startRead, endRead);
-        info("buffered-read {total: {}, rate: {}/s}", countFormat.format(i), decimalFormat.format(rate));
         queue.put(Either.second(Done.INSTANCE));
+        Instant endRead = Instant.now();
+        double rate = calculateRate(count, startRead, endRead);
+        info("buffered-read {total: {}, rate: {}/s}", countFormat.format(count), decimalFormat.format(rate));
     }
 
     private double calculateRate(double count, Instant start, Instant end) {
@@ -211,14 +227,12 @@ public class Migrator {
     }
 
     private String[] parseCSV(String line) {
-        String[] vals = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (int i = 0; i < vals.length; i++) {
-            String val = vals[i];
-            assert !vals[i].equals("NULL");
-            if (val.equals("\\N")) vals[i] = null;
-            if (val.startsWith("\"") && val.endsWith("\"")) vals[i] = val.substring(1, val.length() - 1);
+        String[] l = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (int i = 0; i < l.length; i++) {
+            if (l[i].startsWith("\"") && l[i].endsWith("\"")) l[i] = l[i].substring(1, l[i].length() - 1);
+            if (l[i].equals("\\N") || l[i].toLowerCase().equals("null")) l[i] = null;
         }
-        return vals;
+        return l;
     }
 
     private static String printDuration(Instant start, Instant end) {
@@ -229,6 +243,7 @@ public class Migrator {
     }
 
     public static void main(String[] args) {
+        Instant start = Instant.now();
         try {
             Options options = Options.parseCommandLine(args);
             if (options == null) System.exit(0);
@@ -246,7 +261,6 @@ public class Migrator {
                 LOG.info("Batch size       : {}", options.batch());
             }
 
-            Instant start = Instant.now();
             Migrator migrator = null;
             try (GraknClient client = GraknClient.core(options.grakn())) {
                 Runtime.getRuntime().addShutdownHook(
@@ -259,13 +273,14 @@ public class Migrator {
             } finally {
                 if (migrator != null) migrator.executor.shutdown();
             }
-            Instant end = Instant.now();
-
-            LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
         } catch (Throwable e) {
             LOG.error(e.getMessage(), e);
-            LOG.error("BioGrakn SemMed Migrator terminated with error");
-            System.exit(1);
+            LOG.error("TERMINATED WITH ERROR");
+            exitStatus = 1;
+        } finally {
+            Instant end = Instant.now();
+            LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
+            System.exit(exitStatus);
         }
     }
 }

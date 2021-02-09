@@ -20,7 +20,10 @@
 package biograkn.semmed.writer;
 
 import grakn.client.GraknClient;
+import graql.lang.pattern.variable.ThingVariable;
 import graql.lang.query.GraqlInsert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -36,6 +39,7 @@ import static java.lang.Integer.parseInt;
 
 public class CitationsWriter {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CitationsWriter.class);
     private static final Map<String, Month> months = map(
             pair("jan", Month.JANUARY),
             pair("feb", Month.FEBRUARY),
@@ -80,16 +84,11 @@ public class CitationsWriter {
         assert csv.length == 5;
         if (csv[0] == null) throw new RuntimeException("Null Citation PMID in csv: " + Arrays.toString(csv));
 
-        int pmid = parseInt(csv[0]);
-        String issn = csv[1];
-        // LocalDateTime dp = parseDP(csv[2]);
-        LocalDateTime edat = parseEdat(csv[3]);
-        int pyear = parseInt(csv[4]);
-
-        GraqlInsert query = insert(
-                var().isa("citation").has("pmid", pmid).has("issn", issn)
-                        .has("edat", edat).has("pyear", pyear)
-        );
+        ThingVariable.Thing citation = var().isa("citation").has("pmid", parseInt(csv[0]));
+        if (csv[1] != null) citation = citation.has("issn", csv[1]);
+        if (csv[3] != null) citation = citation.has("edat", parseEdat(csv[3]));
+        if (csv[4] != null) citation = citation.has("pyear", parseInt(csv[4]));
+        GraqlInsert query = insert(citation);
         debug("citation-writer: {}", query);
         tx.query().insert(query);
     }
