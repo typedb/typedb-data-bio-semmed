@@ -76,7 +76,7 @@ build:
 
         sudo systemctl daemon-reload
         sudo systemctl start grakn-core
-        export GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
+        export GRABL_EXPORT_GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
       monitor: |
         sleep 10s
         tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
@@ -91,6 +91,6 @@ build:
       command: |
         bazel run //:migrator -- \
         --source /opt/data \
-        --grakn $GRAKN_CORE_ADDRESS \
+        --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --parallelisation 16 \
         --batch 64
