@@ -54,23 +54,7 @@ build:
         owner: graknlabs
         branch: migrator
       command: |
-        cat > grakn-core.service <<- EOM
-        [Unit]
-        Description=Grakn Core
-
-        [Service]
-        Type=simple
-        ExecStart=/home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/grakn server
-        Restart=on-failure
-        RestartSec=10
-        KillMode=process
-
-        [Install]
-        WantedBy=multi-user.target
-        EOM
-
-        sudo mv grakn-core.service /etc/systemd/system/
-
+        bazel run @graknlabs_dependencies//tool/util:create-systemd-service -- grakn-core "\/home\/grabl\/$GRABL_REPO\/dist\/grakn-core-all-linux\/grakn server"
         bazel run //:grakn-core-extractor-linux -- dist/grakn-core-all-linux
         cd ./dist/grakn-core-all-linux/
 
