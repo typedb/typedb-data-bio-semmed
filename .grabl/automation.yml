@@ -76,5 +76,5 @@ build:
         bazel run //:migrator -- \
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
-        --parallelisation 64 \
+        --parallelisation 128 \
         --batch 64
