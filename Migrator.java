@@ -67,12 +67,12 @@ public class Migrator {
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
     private static final String SCHEMA_GQL = "schema/biograkn-semmed.gql";
-    private static final String SRC_CONCEPTS_CSV = "GENERIC_CONCEPT.csv";
+    private static final String SRC_CONCEPTS_CSV = "CONCEPTS.csv";
     private static final String SRC_CITATIONS_CSV = "CITATIONS.csv";
-    private static final String SRC_SENTENCES_CSV = "SENTENCE.csv";
-    private static final String SRC_PREDICATIONS_CSV = "PREDICATION.csv";
-    private static final String SRC_PREDICATIONS_AUX_CSV = "PREDICATION_AUX.csv";
-    private static final String SRC_ENTITIES_CSV = "ENTITY.csv";
+    private static final String SRC_SENTENCES_CSV = "SENTENCES.csv";
+    private static final String SRC_PREDICATIONS_CSV = "PREDICATIONS.csv";
+    private static final String SRC_PREDICATIONS_AUX_CSV = "PREDICATIONS_AUX.csv";
+    private static final String SRC_ENTITIES_CSV = "ENTITIES.csv";
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
     private static int exitStatus = 0;
