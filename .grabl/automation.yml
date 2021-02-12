@@ -94,4 +94,4 @@ build:
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --parallelisation 64 \
-        --batch 64
+        --batch 256
