@@ -19,11 +19,14 @@
 
 package biograkn.semmed;
 
+import grakn.core.common.parameters.Arguments;
+
 import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
-import grakn.client.GraknClient;
 import grakn.common.collection.Either;
 import grakn.common.concurrent.NamedThreadFactory;
+import grakn.core.Grakn;
+import grakn.core.rocks.RocksGrakn;
 import graql.lang.Graql;
 import graql.lang.query.GraqlDefine;
 import org.slf4j.Logger;
@@ -52,11 +55,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
-import static grakn.client.GraknClient.Session.Type.DATA;
-import static grakn.client.GraknClient.Session.Type.SCHEMA;
-import static grakn.client.GraknClient.Transaction.Type.WRITE;
 import static grakn.common.collection.Collections.map;
 import static grakn.common.collection.Collections.pair;
+import static grakn.core.common.parameters.Arguments.Session.Type.DATA;
+import static grakn.core.common.parameters.Arguments.Session.Type.SCHEMA;
+import static grakn.core.common.parameters.Arguments.Transaction.Type.WRITE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
@@ -77,7 +80,7 @@ public class Migrator {
     private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
     private static int exitStatus = 0;
 
-    private static final Map<String, BiConsumer<GraknClient.Transaction, String[]>> SRC_CSV_WRITERS = map(
+    private static final Map<String, BiConsumer<Grakn.Transaction, String[]>> SRC_CSV_WRITERS = map(
             pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
             pair(SRC_CITATIONS_CSV, CitationsWriter::write)
 //            pair(SRC_SENTENCES_CSV, SentencesWriter::write),
@@ -88,14 +91,14 @@ public class Migrator {
 
     private final AtomicBoolean hasError;
     private final ExecutorService executor;
-    private final GraknClient client;
+    private final Grakn grakn;
     private final Path source;
     private final int parallelisation;
     private final int batch;
 
-    public Migrator(GraknClient client, Path source, int parallelisation, int batch) {
+    public Migrator(Grakn grakn, Path source, int parallelisation, int batch) {
         assert parallelisation < Runtime.getRuntime().availableProcessors();
-        this.client = client;
+        this.grakn = grakn;
         this.source = source;
         this.parallelisation = parallelisation;
         this.batch = batch;
@@ -121,15 +124,15 @@ public class Migrator {
                 throw new RuntimeException("Expected " + file + " file is missing.");
             }
         });
-        if (client.databases().contains(DATABASE_NAME)) {
+        if (grakn.databases().contains(DATABASE_NAME)) {
             throw new RuntimeException("There already exists a database with the name '" + DATABASE_NAME + "'");
         }
     }
 
     private void initialise() throws IOException {
-        client.databases().create(DATABASE_NAME);
-        try (GraknClient.Session session = client.session(DATABASE_NAME, SCHEMA)) {
-            try (GraknClient.Transaction transaction = session.transaction(WRITE)) {
+        grakn.databases().create(DATABASE_NAME);
+        try (Grakn.Session session = grakn.session(DATABASE_NAME, SCHEMA)) {
+            try (Grakn.Transaction transaction = session.transaction(WRITE)) {
                 GraqlDefine schema = Graql.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_GQL)), UTF_8));
                 transaction.query().define(schema);
                 transaction.commit();
@@ -138,15 +141,15 @@ public class Migrator {
     }
 
     private void run() throws FileNotFoundException, InterruptedException {
-        try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
-            for (Map.Entry<String, BiConsumer<GraknClient.Transaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
+        try (Grakn.Session session = grakn.session(DATABASE_NAME, DATA)) {
+            for (Map.Entry<String, BiConsumer<Grakn.Transaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
                 if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.getKey(), sourceCSVWriter.getValue());
             }
         }
     }
 
-    private void asyncMigrate(GraknClient.Session session, String filename,
-                              BiConsumer<GraknClient.Transaction, String[]> writerFn)
+    private void asyncMigrate(Grakn.Session session, String filename,
+                              BiConsumer<Grakn.Transaction, String[]> writerFn)
             throws FileNotFoundException, InterruptedException {
         info("async-migrate (start): {}", filename);
         LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
@@ -159,15 +162,15 @@ public class Migrator {
         info("async-migrate (end): {}", filename);
     }
 
-    private CompletableFuture<Void> asyncWrite(int id, String filename, GraknClient.Session session,
+    private CompletableFuture<Void> asyncWrite(int id, String filename, Grakn.Session session,
                                                LinkedBlockingQueue<Either<List<String[]>, Done>> queue,
-                                               BiConsumer<GraknClient.Transaction, String[]> writerFn) {
+                                               BiConsumer<Grakn.Transaction, String[]> writerFn) {
         return CompletableFuture.runAsync(() -> {
             debug("async-writer-{} (start): {}", id, filename);
             Either<List<String[]>, Done> queueItem;
             try {
                 while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
-                    try (GraknClient.Transaction tx = session.transaction(WRITE)) {
+                    try (Grakn.Transaction tx = session.transaction(WRITE)) {
                         List<String[]> csvLines = queueItem.first();
                         csvLines.forEach(csv -> {
                             debug("async-writer-{}: {}", id, Arrays.toString(csv));
@@ -263,11 +266,11 @@ public class Migrator {
             }
 
             Migrator migrator = null;
-            try (GraknClient client = GraknClient.core(options.grakn())) {
+            try (Grakn grakn = RocksGrakn.open(options.source().resolve("grakn"))) {
                 Runtime.getRuntime().addShutdownHook(
-                        NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
+                        NamedThreadFactory.create(Migrator.class, "shutdown").newThread(grakn::close)
                 );
-                migrator = new Migrator(client, options.source(), options.parallelisation(), options.batch());
+                migrator = new Migrator(grakn, options.source(), options.parallelisation(), options.batch());
                 migrator.validate();
                 migrator.initialise();
                 migrator.run();
