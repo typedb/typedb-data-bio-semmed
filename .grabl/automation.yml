@@ -54,13 +54,14 @@ build:
         owner: graknlabs
         branch: migrator
       command: |
+        export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         cat > grakn-core.service <<- EOM
         [Unit]
         Description=Grakn Core
 
         [Service]
         Type=simple
-        Environment=SERVER_JAVAOPTS="-Xmx32G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=0.0.0.0"
+        Environment=SERVER_JAVAOPTS="-Xmx32G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
         ExecStart=/home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/grakn server
         Restart=on-failure
         RestartSec=10
