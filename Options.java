@@ -37,7 +37,6 @@ public class Options {
 
     @Option(descriptionKey = "grakn",
             names = {"-g", "--grakn"},
-            required = true,
             description = "Grakn server address {host:port}")
     private String grakn;
 

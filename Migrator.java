@@ -259,7 +259,6 @@ public class Migrator {
                 throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
-                LOG.info("Grakn address    : {}", options.grakn());
                 LOG.info("Database name    : {}", options.database());
                 LOG.info("Parallelisation  : {}", options.parallelisation());
                 LOG.info("Batch size       : {}", options.batch());
