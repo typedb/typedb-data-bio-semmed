@@ -19,8 +19,6 @@
 
 package biograkn.semmed;
 
-import grakn.core.common.parameters.Arguments;
-
 import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
 import grakn.common.collection.Either;
@@ -254,20 +252,23 @@ public class Migrator {
             Options options = Options.parseCommandLine(args);
             if (options == null) System.exit(0);
             if (!options.source().toFile().isDirectory()) {
-                throw new RuntimeException("Invalid data directory: " + options.source().toString());
+                throw new RuntimeException("Invalid source data directory: " + options.source().toString());
+            } else if (!options.grakn().toFile().isDirectory()) {
+                throw new RuntimeException("Invalid Grakn data directory: " + options.grakn().toString());
             } else if (options.parallelisation() <= 0) {
                 throw new RuntimeException("Invalid parallelisation config: has to be greater than 0");
             } else if (options.batch() <= 0) {
                 throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
+                LOG.info("Grakn directory  : {}", options.grakn().toString());
                 LOG.info("Database name    : {}", options.database());
                 LOG.info("Parallelisation  : {}", options.parallelisation());
                 LOG.info("Batch size       : {}", options.batch());
             }
 
             Migrator migrator = null;
-            try (Grakn grakn = RocksGrakn.open(options.source().resolve("grakn"))) {
+            try (Grakn grakn = RocksGrakn.open(options.grakn())) {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(grakn::close)
                 );
