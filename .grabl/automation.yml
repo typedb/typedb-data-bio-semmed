@@ -96,5 +96,5 @@ build:
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --database biograkn-semmed \
-        --parallelisation 64 \
+        --parallelisation 128 \
         --batch 64
