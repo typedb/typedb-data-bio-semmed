@@ -52,7 +52,7 @@ build:
       type: background
       filter:
         owner: graknlabs
-        branch: [migrator, embedded-grakn]
+        branch: [migrator, embedded-grakn, embedded-grakn-2]
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         export JVM_OPT="-Xmx64G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
