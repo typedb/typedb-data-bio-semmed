@@ -43,7 +43,7 @@ public class Options {
 
     @Option(descriptionKey = "database",
             names = {"-d", "--database"},
-            defaultValue = Migrator.DATABASE_NAME,
+            required = true,
             description = "The database name to create in the Grakn server")
     private String database;
 

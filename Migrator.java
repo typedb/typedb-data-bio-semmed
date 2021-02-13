@@ -63,7 +63,7 @@ public class Migrator {
 
     public static final int DEFAULT_BATCH_SIZE = 64;
     public static final int DEFAULT_PARALLELISATION = Runtime.getRuntime().availableProcessors();
-    public static final String DATABASE_NAME = "biograkn-semmed";
+    public static final String DEFAULT_DATABASE_NAME = "biograkn-semmed";
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
     private static final String SCHEMA_GQL = "schema/biograkn-semmed.gql";
@@ -89,17 +89,19 @@ public class Migrator {
     private final AtomicBoolean hasError;
     private final ExecutorService executor;
     private final GraknClient client;
+    private final String database;
     private final Path source;
     private final int parallelisation;
     private final int batch;
 
-    public Migrator(GraknClient client, Path source, int parallelisation, int batch) {
+    public Migrator(GraknClient client, String database, Path source, int parallelisation, int batch) {
         assert parallelisation < Runtime.getRuntime().availableProcessors();
         this.client = client;
+        this.database = database;
         this.source = source;
         this.parallelisation = parallelisation;
         this.batch = batch;
-        executor = Executors.newFixedThreadPool(parallelisation, new NamedThreadFactory(DATABASE_NAME));
+        executor = Executors.newFixedThreadPool(parallelisation, new NamedThreadFactory(DEFAULT_DATABASE_NAME));
         hasError = new AtomicBoolean(false);
     }
 
@@ -121,14 +123,14 @@ public class Migrator {
                 throw new RuntimeException("Expected " + file + " file is missing.");
             }
         });
-        if (client.databases().contains(DATABASE_NAME)) {
-            throw new RuntimeException("There already exists a database with the name '" + DATABASE_NAME + "'");
+        if (client.databases().contains(database)) {
+            throw new RuntimeException("There already exists a database with the name '" + database + "'");
         }
     }
 
     private void initialise() throws IOException {
-        client.databases().create(DATABASE_NAME);
-        try (GraknClient.Session session = client.session(DATABASE_NAME, SCHEMA)) {
+        client.databases().create(database);
+        try (GraknClient.Session session = client.session(database, SCHEMA)) {
             try (GraknClient.Transaction transaction = session.transaction(WRITE)) {
                 GraqlDefine schema = Graql.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_GQL)), UTF_8));
                 transaction.query().define(schema);
@@ -138,7 +140,7 @@ public class Migrator {
     }
 
     private void run() throws FileNotFoundException, InterruptedException {
-        try (GraknClient.Session session = client.session(DATABASE_NAME, DATA)) {
+        try (GraknClient.Session session = client.session(database, DATA)) {
             for (Map.Entry<String, BiConsumer<GraknClient.Transaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
                 if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.getKey(), sourceCSVWriter.getValue());
             }
@@ -267,7 +269,7 @@ public class Migrator {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
                 );
-                migrator = new Migrator(client, options.source(), options.parallelisation(), options.batch());
+                migrator = new Migrator(client, options.database(), options.source(), options.parallelisation(), options.batch());
                 migrator.validate();
                 migrator.initialise();
                 migrator.run();

@@ -94,7 +94,7 @@ load("//dependencies/graknlabs:repositories.bzl", "graknlabs_common", "graknlabs
 graknlabs_common()
 graknlabs_client_java()
 
-# @graknlbs_client_java dependencies
+# @graknlabs_client_java dependencies
 load("@graknlabs_client_java//dependencies/graknlabs:repositories.bzl", "graknlabs_graql", "graknlabs_protocol", "graknlabs_grabl_tracing")
 graknlabs_graql()
 graknlabs_protocol()
