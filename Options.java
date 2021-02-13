@@ -80,11 +80,10 @@ public class Options {
             if (!CommandLine.UnmatchedArgumentException.printSuggestions(ex, command.getErr())) {
                 ex.getCommandLine().usage(command.getErr());
             }
-            proceed = false;
+            throw ex;
         }
 
-        if (proceed) return options;
-        else return null;
+        return options;
     }
 
     public Path source() {

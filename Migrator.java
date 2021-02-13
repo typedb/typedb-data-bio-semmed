@@ -250,7 +250,6 @@ public class Migrator {
         Instant start = Instant.now();
         try {
             Options options = Options.parseCommandLine(args);
-            if (options == null) System.exit(0);
             if (!options.source().toFile().isDirectory()) {
                 throw new RuntimeException("Invalid source data directory: " + options.source().toString());
             } else if (!options.grakn().toFile().isDirectory()) {
