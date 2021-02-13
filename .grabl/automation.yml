@@ -60,6 +60,6 @@ build:
         bazel run --jvmopt="$JVM_OPT" //:migrator-bin-linux -- \
         --source /opt/data \
         --grakn /home/grabl/$GRABL_REPO/grakn/data \
-        --database biograkn-semmed
+        --database biograkn-semmed \
         --parallelisation 256 \
         --batch 64
