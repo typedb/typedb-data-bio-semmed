@@ -61,5 +61,5 @@ build:
         --source /opt/data \
         --grakn /home/grabl/$GRABL_REPO/grakn/data \
         --database biograkn-semmed
-        --parallelisation 64 \
+        --parallelisation 256 \
         --batch 64
