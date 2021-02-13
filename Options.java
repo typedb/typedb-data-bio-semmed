@@ -25,6 +25,7 @@ import picocli.CommandLine.Option;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 @Command(name = "biograkn-semmed", mixinStandardHelpOptions = true)
 public class Options {
@@ -59,32 +60,28 @@ public class Options {
             description = "The number of queries that a transaction should batch in one commit")
     private int batch;
 
-    public static Options parseCommandLine(String[] args) {
+    public static Optional<Options> parseCommandLine(String[] args) {
         final Options options = new Options();
-        boolean proceed;
         final CommandLine command = new CommandLine(options);
 
         try {
             command.parseArgs(args);
             if (command.isUsageHelpRequested()) {
                 command.usage(command.getOut());
-                proceed = false;
+                return Optional.empty();
             } else if (command.isVersionHelpRequested()) {
                 command.printVersionHelp(command.getOut());
-                proceed = false;
+                return Optional.empty();
             } else {
-                proceed = true;
+                return Optional.of(options);
             }
         } catch (CommandLine.ParameterException ex) {
             command.getErr().println(ex.getMessage());
             if (!CommandLine.UnmatchedArgumentException.printSuggestions(ex, command.getErr())) {
                 ex.getCommandLine().usage(command.getErr());
             }
-            proceed = false;
+            throw ex;
         }
-
-        if (proceed) return options;
-        else return null;
     }
 
     public Path source() {

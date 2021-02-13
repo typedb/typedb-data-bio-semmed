@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -248,8 +249,11 @@ public class Migrator {
     public static void main(String[] args) {
         Instant start = Instant.now();
         try {
-            Options options = Options.parseCommandLine(args);
-            if (options == null) System.exit(0);
+            Optional<Options> parsedOptions = Options.parseCommandLine(args);
+            if (!parsedOptions.isPresent()) System.exit(0);
+
+            Options options = parsedOptions.get();
+
             if (!options.source().toFile().isDirectory()) {
                 throw new RuntimeException("Invalid data directory: " + options.source().toString());
             } else if (options.parallelisation() <= 0) {
