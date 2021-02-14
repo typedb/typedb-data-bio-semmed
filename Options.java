@@ -60,6 +60,11 @@ public class Options {
             description = "The number of queries that a transaction should batch in one commit")
     private int batch;
 
+    @Option(descriptionKey = "statistics",
+            names = {"--statistics"},
+            description = "File path and name to which the Grakn statistics will be exported to")
+    private String statistics;
+
     public static Optional<Options> parseCommandLine(String[] args) {
         final Options options = new Options();
         final CommandLine command = new CommandLine(options);
@@ -90,6 +95,11 @@ public class Options {
 
     public Path grakn() {
         return Paths.get(grakn);
+    }
+
+    public Optional<Path> statistics() {
+        if (statistics == null) return Optional.empty();
+        else return Optional.of(Paths.get(statistics));
     }
 
     public String database() {

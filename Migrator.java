@@ -31,8 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -264,11 +266,14 @@ public class Migrator {
             } else if (options.batch() <= 0) {
                 throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
-                LOG.info("Source directory : {}", options.source().toString());
-                LOG.info("Grakn directory  : {}", options.grakn().toString());
-                LOG.info("Database name    : {}", options.database());
-                LOG.info("Parallelisation  : {}", options.parallelisation());
-                LOG.info("Batch size       : {}", options.batch());
+                LOG.info("Source directory  : {}", options.source().toString());
+                LOG.info("Grakn directory   : {}", options.grakn().toString());
+                LOG.info("Database name     : {}", options.database());
+                LOG.info("Parallelisation   : {}", options.parallelisation());
+                LOG.info("Batch size        : {}", options.batch());
+                if (options.statistics().isPresent()) {
+                    LOG.info("Statistics report : {}", options.statistics().get());
+                }
             }
 
             Migrator migrator = null;
@@ -281,6 +286,7 @@ public class Migrator {
                 migrator.initialise();
                 migrator.run();
                 LOG.info("RocksDB Statistics:\n{}", grakn.statistics());
+                if (options.statistics().isPresent()) exportStats(grakn.statistics(), options.statistics().get());
             } finally {
                 if (migrator != null) migrator.executor.shutdown();
             }
@@ -293,5 +299,11 @@ public class Migrator {
             LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
             System.exit(exitStatus);
         }
+    }
+
+    private static void exportStats(String statistics, Path file) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file.toFile()));
+        writer.write(statistics);
+        writer.close();
     }
 }
