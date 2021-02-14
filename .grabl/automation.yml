@@ -60,6 +60,7 @@ build:
         sudo mkfs.ext4 /dev/nvme0n1
         sudo mount /dev/nvme0n1 /nvme/
         sudo mkdir -p /nvme/grakn
+        sudo chmod a+w /nvme/grakn
         bazel run --jvmopt="$JVM_OPT" //:migrator-bin-linux -- \
         --source /opt/data \
         --grakn /nvme/grakn \
