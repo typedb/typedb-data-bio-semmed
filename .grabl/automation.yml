@@ -55,7 +55,7 @@ build:
         branch: embedded-grakn-3
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
-        export JVM_OPT="-Xmx64G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
+        export JVM_OPT="-Xmx64G -XX:+UseG1GC -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
         mkdir -p ./grakn/data
         bazel run --jvmopt="$JVM_OPT" //:migrator-bin-linux -- \
         --source /opt/data \
