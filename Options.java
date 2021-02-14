@@ -39,7 +39,7 @@ public class Options {
     @Option(descriptionKey = "grakn",
             names = {"-g", "--grakn"},
             required = true,
-            description = "Grakn server address {host:port}")
+            description = "Directory in which Grakn will store its data")
     private String grakn;
 
     @Option(descriptionKey = "database",
@@ -88,8 +88,8 @@ public class Options {
         return Paths.get(source);
     }
 
-    public String grakn() {
-        return grakn;
+    public Path grakn() {
+        return Paths.get(grakn);
     }
 
     public String database() {

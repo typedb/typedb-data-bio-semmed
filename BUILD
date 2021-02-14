@@ -19,6 +19,7 @@
 
 load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 load("@graknlabs_bazel_distribution//artifact:rules.bzl", "artifact_extractor")
+load("@graknlabs_dependencies//builder/java:rules.bzl", "native_java_libraries")
 
 exports_files(["VERSION", "LICENSE", "README.md"])
 
@@ -27,27 +28,41 @@ artifact_extractor(
     artifact = "@graknlabs_grakn_core_artifact_linux//file",
 )
 
-java_library(
-    name = "migrator-src",
+native_java_libraries(
+    name = "migrator",
     srcs = glob(["*.java", "writer/*.java"]),
     deps = [
         # External dependencies from Grakn Labs
         "@graknlabs_common//:common",
-        "@graknlabs_client_java//:client-java",
         "@graknlabs_graql//java/query:query",
         "@graknlabs_graql//java/pattern:pattern",
         "@graknlabs_graql//java:graql",
+        "@graknlabs_grakn_core//common:common",
 
         # External dependencies from Maven
         "@maven//:info_picocli_picocli",
         "@maven//:org_slf4j_slf4j_api",
     ],
+    native_libraries_deps = [
+        "@graknlabs_grakn_core//rocks:rocks",
+        "@graknlabs_grakn_core//:grakn",
+    ],
 )
 
 java_binary(
-    name = "migrator",
+    name = "migrator-bin-mac",
     main_class = "biograkn.semmed.Migrator",
-    runtime_deps = [":migrator-src"],
+    runtime_deps = [":migrator-mac"],
+    tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
+    resources = [ "//conf:logback.xml" ],
+    data = ["//schema:biograkn-semmed.gql"],
+    resource_strip_prefix = "conf/",
+)
+
+java_binary(
+    name = "migrator-bin-linux",
+    main_class = "biograkn.semmed.Migrator",
+    runtime_deps = [":migrator-linux"],
     tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
     resources = [ "//conf:logback.xml" ],
     data = ["//schema:biograkn-semmed.gql"],

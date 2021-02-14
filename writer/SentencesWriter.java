@@ -19,11 +19,11 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.GraknClient;
+import grakn.core.Grakn;
 
 public class SentencesWriter {
 
-    public static void write(GraknClient.Transaction tx, String[] csv) {
+    public static void write(Grakn.Transaction tx, String[] csv) {
         // TODO
     }
 }

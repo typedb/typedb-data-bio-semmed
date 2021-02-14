@@ -73,6 +73,10 @@ checkstyle_deps()
 load("@graknlabs_dependencies//tool/unuseddeps:deps.bzl", unuseddeps_deps = "deps")
 unuseddeps_deps()
 
+# Load //distribution/docker
+load("@graknlabs_dependencies//distribution/docker:deps.bzl", docker_deps = "deps")
+docker_deps()
+
 ######################################
 # Load @graknlabs_bazel_distribution #
 ######################################
@@ -90,12 +94,12 @@ rules_pkg_dependencies()
 # Load @graknlabs dependencies #
 ################################
 
-load("//dependencies/graknlabs:repositories.bzl", "graknlabs_common", "graknlabs_client_java")
+load("//dependencies/graknlabs:repositories.bzl", "graknlabs_common", "graknlabs_client_java", "graknlabs_grakn_core")
 graknlabs_common()
-graknlabs_client_java()
+graknlabs_grakn_core()
 
-# @graknlabs_client_java dependencies
-load("@graknlabs_client_java//dependencies/graknlabs:repositories.bzl", "graknlabs_graql", "graknlabs_protocol", "graknlabs_grabl_tracing")
+# @graknlabs_grakn_core dependencies
+load("@graknlabs_grakn_core//dependencies/graknlabs:repositories.bzl", "graknlabs_graql", "graknlabs_protocol", "graknlabs_grabl_tracing")
 graknlabs_graql()
 graknlabs_protocol()
 graknlabs_grabl_tracing()
@@ -110,7 +114,7 @@ graknlabs_grakn_core_artifacts()
 load("//dependencies/maven:artifacts.bzl", graknlabs_biograkn_semmed_artifacts = "artifacts")
 load("@graknlabs_dependencies//tool/common:deps.bzl", graknlabs_dependencies_tool_common_artifacts = "maven_artifacts")
 load("@graknlabs_common//dependencies/maven:artifacts.bzl", graknlabs_common_artifacts = "artifacts")
-load("@graknlabs_client_java//dependencies/maven:artifacts.bzl", graknlabs_client_java_artifacts = "artifacts")
+load("@graknlabs_grakn_core//dependencies/maven:artifacts.bzl", graknlabs_grakn_core_artifacts = "artifacts")
 load("@graknlabs_graql//dependencies/maven:artifacts.bzl", graknlabs_graql_artifacts = "artifacts")
 load("@graknlabs_protocol//dependencies/maven:artifacts.bzl", graknlabs_protocol_artifacts = "artifacts")
 load("@graknlabs_grabl_tracing//dependencies/maven:artifacts.bzl", graknlabs_grabl_tracing_artifacts = "artifacts")
@@ -120,7 +124,7 @@ maven(
     graknlabs_biograkn_semmed_artifacts +
     graknlabs_dependencies_tool_common_artifacts +
     graknlabs_common_artifacts +
-    graknlabs_client_java_artifacts +
+    graknlabs_grakn_core_artifacts +
     graknlabs_graql_artifacts +
     graknlabs_protocol_artifacts +
     graknlabs_grabl_tracing_artifacts
