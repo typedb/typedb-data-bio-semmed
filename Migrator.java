@@ -199,7 +199,7 @@ public class Migrator {
         int count = 0;
         Instant startRead = Instant.now();
         Instant startBatch = Instant.now();
-        while (iterator.hasNext() && !hasError.get() && count < 5_000_000) {
+        while (iterator.hasNext() && !hasError.get()) {
             count++;
             String[] csv = parseCSV(iterator.next());
             debug("buffered-read (line {}): {}", count, Arrays.toString(csv));
