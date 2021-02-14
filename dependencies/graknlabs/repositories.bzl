@@ -43,6 +43,6 @@ def graknlabs_client_java():
 def graknlabs_grakn_core():
     git_repository(
         name = "graknlabs_grakn_core",
-        remote = "https://github.com/graknlabs/grakn",
-        commit = "560abaaf8fa3057d9985430e8f0042de5fc0c13d"
+        remote = "https://github.com/haikalpribadi/grakn",
+        commit = "2598e587b108fb1efc03c717ecedc500dc9b1b30"
     )
