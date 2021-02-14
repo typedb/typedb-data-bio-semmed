@@ -52,7 +52,7 @@ build:
       type: background
       filter:
         owner: graknlabs
-        branch: migrator
+        branch: master
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         cat > grakn-core.service <<- EOM
@@ -87,7 +87,7 @@ build:
       type: background
       filter:
         owner: graknlabs
-        branch: migrator
+        branch: master
       dependencies: [run-grakn-core]
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
