@@ -47,7 +47,7 @@ build:
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
     run-biograkn-semmed:
-      machine: 64-core-128-gb
+      machine: 32-core-64-gb
       image: graknlabs-ubuntu-20.04-semmed
       type: background
       filter:
