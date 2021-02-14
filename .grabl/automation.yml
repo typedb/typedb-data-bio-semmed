@@ -48,7 +48,7 @@ build:
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
     run-biograkn-semmed:
       machine: 32-core-64-gb
-      image: graknlabs-ubuntu-20.04-semmed
+      image: graknlabs-ubuntu-20.04-semmed-4-tb
       type: background
       filter:
         owner: graknlabs

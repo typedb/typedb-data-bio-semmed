@@ -285,7 +285,6 @@ public class Migrator {
                 migrator.validate();
                 migrator.initialise();
                 migrator.run();
-                LOG.info("RocksDB Statistics:\n{}", grakn.statistics());
                 if (options.statistics().isPresent()) exportStats(grakn.statistics(), options.statistics().get());
             } finally {
                 if (migrator != null) migrator.executor.shutdown();
@@ -305,5 +304,6 @@ public class Migrator {
         BufferedWriter writer = new BufferedWriter(new FileWriter(file.toFile()));
         writer.write(statistics);
         writer.close();
+        LOG.info("Exported Grakn storage Statistics to: {}", file.toAbsolutePath().toString());
     }
 }

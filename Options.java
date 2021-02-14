@@ -62,7 +62,7 @@ public class Options {
 
     @Option(descriptionKey = "statistics",
             names = {"--statistics"},
-            description = "File path and name to which the Grakn statistics will be exported to")
+            description = "File path and name to which the Grakn storage statistics will be exported to")
     private String statistics;
 
     public static Optional<Options> parseCommandLine(String[] args) {
