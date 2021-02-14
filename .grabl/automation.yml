@@ -47,7 +47,7 @@ build:
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
     run-biograkn-semmed:
-      machine: 32-core-256-gb-8-tb-nvme
+      machine: 32-core-64-gb
       image: graknlabs-ubuntu-20.04-semmed
       type: background
       filter:
@@ -56,14 +56,10 @@ build:
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         export JVM_OPT="-Xmx64G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
-        sudo mkdir /nvme/
-        sudo mkfs.ext4 /dev/nvme0n1
-        sudo mount /dev/nvme0n1 /nvme/
-        sudo mkdir -p /nvme/grakn
-        sudo chmod a+w /nvme/grakn
+        mkdir -p ./grakn/data
         bazel run --jvmopt="$JVM_OPT" //:migrator-bin-linux -- \
         --source /opt/data \
-        --grakn /nvme/grakn \
+        --grakn /home/grabl/$GRABL_REPO/grakn/data \
         --database biograkn-semmed \
         --parallelisation 256 \
         --batch 64
