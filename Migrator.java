@@ -285,7 +285,6 @@ public class Migrator {
                 migrator.validate();
                 migrator.initialise();
                 migrator.run();
-                if (options.statistics().isPresent()) exportStats(grakn.statistics(), options.statistics().get());
             } finally {
                 if (migrator != null) migrator.executor.shutdown();
             }
