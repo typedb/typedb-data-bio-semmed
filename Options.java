@@ -56,7 +56,7 @@ public class Options {
 
     @Option(descriptionKey = "batch",
             names = {"-b", "--batch"},
-            defaultValue = "" + Migrator.DEFAULT_BATCH_SIZE,
+            defaultValue = "" + Migrator.DEFAULT_WRITE_BATCH_SIZE,
             description = "The number of queries that a transaction should batch in one commit")
     private int batch;
 
