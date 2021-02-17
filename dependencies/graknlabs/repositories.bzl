@@ -44,5 +44,5 @@ def graknlabs_grakn_core():
     git_repository(
         name = "graknlabs_grakn_core",
         remote = "https://github.com/haikalpribadi/grakn",
-        commit = "233d210a76c6b8672cd1d99b27d925d16923a266"
+        commit = "566eb7cd27c0086187a0633e695857f2b9653db6"
     )
