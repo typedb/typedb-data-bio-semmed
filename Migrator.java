@@ -218,7 +218,7 @@ public class Migrator {
                 csvLines = new ArrayList<>(batch);
                 if (csvLinesGroup.size() == batchGroup || !iterator.hasNext()) {
                     queue.put(Either.first(csvLinesGroup));
-                    csvLines = new ArrayList<>(batchGroup);
+                    csvLinesGroup = new ArrayList<>(batchGroup);
                 }
             }
 
