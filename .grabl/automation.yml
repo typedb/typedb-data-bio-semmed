@@ -63,5 +63,5 @@ build:
         --grakn /home/grabl/$GRABL_REPO/grakn/data \
         --database biograkn-semmed \
         --parallelisation 256 \
-        --batch 32
+        --batch 16
         curl --upload-file /home/grabl/$GRABL_REPO/grakn/data/biograkn-semmed/data/LOG http://transfer.sh/rocksdb.log
