@@ -53,7 +53,6 @@ build:
       filter:
         owner: graknlabs
         branch: master
-      dependencies: [run-grakn-core]
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
