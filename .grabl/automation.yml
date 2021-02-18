@@ -46,9 +46,9 @@ build:
         dependencies/maven/update.sh
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
-    run-biograkn-semmed:
+    run-grakn-core:
       machine: 64-core-128-gb
-      image: graknlabs-ubuntu-20.04-semmed
+      image: graknlabs-ubuntu-20.04-512-gb
       type: background
       filter:
         owner: graknlabs
@@ -78,10 +78,24 @@ build:
 
         sudo systemctl daemon-reload
         sudo systemctl start grakn-core
-
-        bazel run //:migrator -- \
+        export GRABL_EXPORT_GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
+      monitor: |
+        sleep 10s
+        tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
+    run-biograkn-semmed:
+      machine: 64-core-128-gb
+      image: graknlabs-ubuntu-20.04-semmed
+      type: background
+      filter:
+        owner: graknlabs
+        branch: master
+      dependencies: [run-grakn-core]
+      command: |
+        export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
+        export JVM_OPT="-Xmx30G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
+        bazel run --jvmopt="$JVM_OPT" //:migrator -- \
         --source /opt/data \
-        --grakn localhost:1729 \
+        --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --database biograkn-semmed \
         --parallelisation 64 \
-        --batch 16
+        --batch 32
