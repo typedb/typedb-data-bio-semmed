@@ -46,13 +46,13 @@ build:
         dependencies/maven/update.sh
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
-    run-grakn-core:
+    run-biograkn-semmed:
       machine: 64-core-128-gb
-      image: graknlabs-ubuntu-20.04-512-gb
+      image: graknlabs-ubuntu-20.04-semmed
       type: background
       filter:
         owner: graknlabs
-        branch: master
+        branch: local-grakn
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
@@ -75,27 +75,12 @@ build:
         sudo mv grakn-core.service /etc/systemd/system/
         bazel run //:grakn-core-extractor-linux -- dist/grakn-core-all-linux
         cd ./dist/grakn-core-all-linux/
-
         sudo systemctl daemon-reload
         sudo systemctl start grakn-core
-        export GRABL_EXPORT_GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
-      monitor: |
-        sleep 10s
-        tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
-    run-biograkn-semmed:
-      machine: 32-core-64-gb
-      image: graknlabs-ubuntu-20.04-semmed
-      type: background
-      filter:
-        owner: graknlabs
-        branch: master
-      dependencies: [run-grakn-core]
-      command: |
-        export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
-        export JVM_OPT="-Xmx30G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
-        bazel run --jvmopt="$JVM_OPT" //:migrator -- \
+
+        bazel run //:migrator -- \
         --source /opt/data \
-        --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
+        --grakn localhost:1729 \
         --database biograkn-semmed \
-        --parallelisation 1024 \
+        --parallelisation 512 \
         --batch 16
