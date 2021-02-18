@@ -47,7 +47,7 @@ build:
         git diff --exit-code dependencies/maven/artifacts.snapshot
         bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
     run-grakn-core:
-      machine: 32-core-64-gb
+      machine: 64-core-128-gb
       image: graknlabs-ubuntu-20.04-512-gb
       type: background
       filter:
@@ -55,13 +55,14 @@ build:
         branch: master
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
+        echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
         cat > grakn-core.service <<- EOM
         [Unit]
         Description=Grakn Core
 
         [Service]
         Type=simple
-        Environment=SERVER_JAVAOPTS="-Xmx32G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
+        Environment=SERVER_JAVAOPTS="-Xmx64G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
         ExecStart=/home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/grakn server
         Restart=on-failure
         RestartSec=10
@@ -96,5 +97,5 @@ build:
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --database biograkn-semmed \
-        --parallelisation 128 \
-        --batch 64
+        --parallelisation 64 \
+        --batch 16
