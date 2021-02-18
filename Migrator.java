@@ -62,7 +62,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
 
-    public static final int DEFAULT_BATCH_SIZE = 64;
+    public static final int DEFAULT_WRITE_BATCH_SIZE = 64;
+    public static final int DEFAULT_READ_BATCH_SIZE = 512;
     public static final int DEFAULT_PARALLELISATION = Runtime.getRuntime().availableProcessors();
     public static final String DEFAULT_DATABASE_NAME = "biograkn-semmed";
 
@@ -94,6 +95,7 @@ public class Migrator {
     private final Path source;
     private final int parallelisation;
     private final int batch;
+    private final int batchGroup;
 
     public Migrator(GraknClient client, String database, Path source, int parallelisation, int batch) {
         assert parallelisation < Runtime.getRuntime().availableProcessors();
@@ -102,6 +104,7 @@ public class Migrator {
         this.source = source;
         this.parallelisation = parallelisation;
         this.batch = batch;
+        this.batchGroup = DEFAULT_READ_BATCH_SIZE / batch;
         executor = Executors.newFixedThreadPool(parallelisation, new NamedThreadFactory(DEFAULT_DATABASE_NAME));
         hasError = new AtomicBoolean(false);
     }
@@ -152,7 +155,7 @@ public class Migrator {
                               BiConsumer<GraknClient.Transaction, String[]> writerFn)
             throws FileNotFoundException, InterruptedException {
         info("async-migrate (start): {}", filename);
-        LinkedBlockingQueue<Either<List<String[]>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
+        LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
         List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
         for (int i = 0; i < parallelisation; i++) {
             asyncWrites.add(asyncWrite(i + 1, filename, session, queue, writerFn));
@@ -163,20 +166,22 @@ public class Migrator {
     }
 
     private CompletableFuture<Void> asyncWrite(int id, String filename, GraknClient.Session session,
-                                               LinkedBlockingQueue<Either<List<String[]>, Done>> queue,
+                                               LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue,
                                                BiConsumer<GraknClient.Transaction, String[]> writerFn) {
         return CompletableFuture.runAsync(() -> {
             debug("async-writer-{} (start): {}", id, filename);
-            Either<List<String[]>, Done> queueItem;
+            Either<List<List<String[]>>, Done> queueItem;
             try {
                 while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
-                    try (GraknClient.Transaction tx = session.transaction(WRITE)) {
-                        List<String[]> csvLines = queueItem.first();
-                        csvLines.forEach(csv -> {
-                            debug("async-writer-{}: {}", id, Arrays.toString(csv));
-                            writerFn.accept(tx, csv);
-                        });
-                        tx.commit();
+                    List<List<String[]>> csvLinesGroup = queueItem.first();
+                    for (List<String[]> csvLines : csvLinesGroup) {
+                        try (GraknClient.Transaction tx = session.transaction(WRITE)) {
+                            csvLines.forEach(csv -> {
+                                debug("async-writer-{}: {}", id, Arrays.toString(csv));
+                                writerFn.accept(tx, csv);
+                            });
+                            tx.commit();
+                        }
                     }
                 }
                 assert queueItem.isSecond() || hasError.get();
@@ -191,22 +196,29 @@ public class Migrator {
         }, executor);
     }
 
-    private void bufferedRead(String filename, LinkedBlockingQueue<Either<List<String[]>, Done>> queue)
+    private void bufferedRead(String filename, LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue)
             throws InterruptedException, FileNotFoundException {
         Iterator<String> iterator = newBufferedReader(filename).lines().iterator();
-        ArrayList<String[]> csvLines = new ArrayList<>(batch);
+        List<List<String[]>> csvLinesGroup = new ArrayList<>(batchGroup);
+        List<String[]> csvLines = new ArrayList<>(batch);
+
         int count = 0;
         Instant startRead = Instant.now();
         Instant startBatch = Instant.now();
-        while (iterator.hasNext() && !hasError.get() && count < 5_000_000) {
+        while (iterator.hasNext() && !hasError.get()) {
             count++;
             String[] csv = parseCSV(iterator.next());
             debug("buffered-read (line {}): {}", count, Arrays.toString(csv));
             csvLines.add(csv);
             if (csvLines.size() == batch || !iterator.hasNext()) {
-                queue.put(Either.first(csvLines));
+                csvLinesGroup.add(csvLines);
                 csvLines = new ArrayList<>(batch);
+                if (csvLinesGroup.size() == batchGroup || !iterator.hasNext()) {
+                    queue.put(Either.first(csvLinesGroup));
+                    csvLinesGroup = new ArrayList<>(batchGroup);
+                }
             }
+
             if (count % 10_000 == 0) {
                 Instant endBatch = Instant.now();
                 double rate = calculateRate(10_000, startBatch, endBatch);
