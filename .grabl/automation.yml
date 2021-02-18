@@ -83,7 +83,7 @@ build:
         sleep 10s
         tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
     run-biograkn-semmed:
-      machine: 64-core-128-gb
+      machine: 32-core-64-gb
       image: graknlabs-ubuntu-20.04-semmed
       type: background
       filter:
@@ -97,5 +97,5 @@ build:
         --source /opt/data \
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --database biograkn-semmed \
-        --parallelisation 64 \
-        --batch 32
+        --parallelisation 512 \
+        --batch 16
