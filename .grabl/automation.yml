@@ -98,4 +98,4 @@ build:
         --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
         --database biograkn-semmed \
         --parallelisation 256 \
-        --batch 16
+        --batch 32
