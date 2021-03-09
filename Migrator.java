@@ -98,7 +98,7 @@ public class Migrator {
     private final int batchGroup;
 
     public Migrator(GraknClient client, String database, Path source, int parallelisation, int batch) {
-        assert parallelisation < Runtime.getRuntime().availableProcessors();
+        assert parallelisation < DEFAULT_PARALLELISATION;
         this.client = client;
         this.database = database;
         this.source = source;
@@ -128,7 +128,8 @@ public class Migrator {
             }
         });
         if (client.databases().contains(database)) {
-            throw new RuntimeException("There already exists a database with the name '" + database + "'");
+            client.databases().get(database).delete();
+            // throw new RuntimeException("There already exists a database with the name '" + database + "'");
         }
     }
 
@@ -281,7 +282,7 @@ public class Migrator {
             }
 
             Migrator migrator = null;
-            try (GraknClient client = GraknClient.core(options.grakn())) {
+            try (GraknClient client = GraknClient.core(options.grakn(), DEFAULT_PARALLELISATION)) {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
                 );
