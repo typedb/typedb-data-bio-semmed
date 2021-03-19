@@ -19,7 +19,7 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.GraknClient;
+import grakn.client.api.GraknTransaction;
 import graql.lang.pattern.variable.ThingVariable;
 import graql.lang.query.GraqlInsert;
 import org.slf4j.Logger;
@@ -80,7 +80,7 @@ public class CitationsWriter {
             pair("12", Month.DECEMBER)
     );
 
-    public static void write(GraknClient.Transaction tx, String[] csv) {
+    public static void write(GraknTransaction tx, String[] csv) {
         assert csv.length == 5;
         if (csv[0] == null) throw new RuntimeException("Null Citation PMID in csv: " + Arrays.toString(csv));
 

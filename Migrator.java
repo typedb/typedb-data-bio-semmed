@@ -21,7 +21,10 @@ package biograkn.semmed;
 
 import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
-import grakn.client.GraknClient;
+import grakn.client.Grakn;
+import grakn.client.api.GraknClient;
+import grakn.client.api.GraknSession;
+import grakn.client.api.GraknTransaction;
 import grakn.common.collection.Either;
 import grakn.common.concurrent.NamedThreadFactory;
 import graql.lang.Graql;
@@ -53,9 +56,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
-import static grakn.client.GraknClient.Session.Type.DATA;
-import static grakn.client.GraknClient.Session.Type.SCHEMA;
-import static grakn.client.GraknClient.Transaction.Type.WRITE;
+import static grakn.client.api.GraknSession.Type.DATA;
+import static grakn.client.api.GraknSession.Type.SCHEMA;
+import static grakn.client.api.GraknTransaction.Type.WRITE;
 import static grakn.common.collection.Collections.map;
 import static grakn.common.collection.Collections.pair;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -79,7 +82,7 @@ public class Migrator {
     private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
     private static int exitStatus = 0;
 
-    private static final Map<String, BiConsumer<GraknClient.Transaction, String[]>> SRC_CSV_WRITERS = map(
+    private static final Map<String, BiConsumer<GraknTransaction, String[]>> SRC_CSV_WRITERS = map(
             pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
             pair(SRC_CITATIONS_CSV, CitationsWriter::write)
 //            pair(SRC_SENTENCES_CSV, SentencesWriter::write),
@@ -135,8 +138,8 @@ public class Migrator {
 
     private void initialise() throws IOException {
         client.databases().create(database);
-        try (GraknClient.Session session = client.session(database, SCHEMA)) {
-            try (GraknClient.Transaction transaction = session.transaction(WRITE)) {
+        try (GraknSession session = client.session(database, SCHEMA)) {
+            try (GraknTransaction transaction = session.transaction(WRITE)) {
                 GraqlDefine schema = Graql.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_GQL)), UTF_8));
                 transaction.query().define(schema);
                 transaction.commit();
@@ -145,15 +148,15 @@ public class Migrator {
     }
 
     private void run() throws FileNotFoundException, InterruptedException {
-        try (GraknClient.Session session = client.session(database, DATA)) {
-            for (Map.Entry<String, BiConsumer<GraknClient.Transaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
+        try (GraknSession session = client.session(database, DATA)) {
+            for (Map.Entry<String, BiConsumer<GraknTransaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
                 if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.getKey(), sourceCSVWriter.getValue());
             }
         }
     }
 
-    private void asyncMigrate(GraknClient.Session session, String filename,
-                              BiConsumer<GraknClient.Transaction, String[]> writerFn)
+    private void asyncMigrate(GraknSession session, String filename,
+                              BiConsumer<GraknTransaction, String[]> writerFn)
             throws FileNotFoundException, InterruptedException {
         info("async-migrate (start): {}", filename);
         LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
@@ -166,9 +169,9 @@ public class Migrator {
         info("async-migrate (end): {}", filename);
     }
 
-    private CompletableFuture<Void> asyncWrite(int id, String filename, GraknClient.Session session,
+    private CompletableFuture<Void> asyncWrite(int id, String filename, GraknSession session,
                                                LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue,
-                                               BiConsumer<GraknClient.Transaction, String[]> writerFn) {
+                                               BiConsumer<GraknTransaction, String[]> writerFn) {
         return CompletableFuture.runAsync(() -> {
             debug("async-writer-{} (start): {}", id, filename);
             Either<List<List<String[]>>, Done> queueItem;
@@ -176,7 +179,7 @@ public class Migrator {
                 while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
                     List<List<String[]>> csvLinesGroup = queueItem.first();
                     for (List<String[]> csvLines : csvLinesGroup) {
-                        try (GraknClient.Transaction tx = session.transaction(WRITE)) {
+                        try (GraknTransaction tx = session.transaction(WRITE)) {
                             csvLines.forEach(csv -> {
                                 debug("async-writer-{}: {}", id, Arrays.toString(csv));
                                 writerFn.accept(tx, csv);
@@ -282,7 +285,7 @@ public class Migrator {
             }
 
             Migrator migrator = null;
-            try (GraknClient client = GraknClient.core(options.grakn(), DEFAULT_PARALLELISATION)) {
+            try (GraknClient client = Grakn.coreClient(options.grakn(), DEFAULT_PARALLELISATION)) {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
                 );

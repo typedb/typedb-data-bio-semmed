@@ -19,7 +19,7 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.GraknClient;
+import grakn.client.api.GraknTransaction;
 import graql.lang.query.GraqlInsert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ public class ConceptsWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConceptsWriter.class);
 
-    public static void write(GraknClient.Transaction tx, String[] csv) {
+    public static void write(GraknTransaction tx, String[] csv) {
         assert csv.length == 3;
         if (csv[0] == null) throw new RuntimeException("Null Concept ID in csv: " + Arrays.toString(csv));
         if (csv[1] == null) throw new RuntimeException("Null Concept CUI in csv: " + Arrays.toString(csv));

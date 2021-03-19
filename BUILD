@@ -33,6 +33,7 @@ java_library(
     deps = [
         # External dependencies from Grakn Labs
         "@graknlabs_common//:common",
+        "@graknlabs_client_java//api:api",
         "@graknlabs_client_java//:client-java",
         "@graknlabs_graql//java/query:query",
         "@graknlabs_graql//java/pattern:pattern",
