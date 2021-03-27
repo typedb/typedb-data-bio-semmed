@@ -255,9 +255,16 @@ public class Migrator {
         String[] arr = new String[csv.size()];
         for (int i = 0; i < csv.size(); i++) {
             arr[i] = csv.get(i);
-            if (arr[i] != null && (arr[i].equals("\\N") || arr[i].toLowerCase().equals("null"))) arr[i] = null;
+            if (arr[i] != null) {
+                if ((arr[i].equals("\\N") || arr[i].toLowerCase().equals("null"))) arr[i] = null;
+                else arr[i] = escapeDoubleQuotes(arr[i]);
+            }
         }
         return arr;
+    }
+
+    private String escapeDoubleQuotes(String toFormat) {
+        return toFormat.replaceAll("\"", "\\\\\"");
     }
 
     private static String printDuration(Instant start, Instant end) {
