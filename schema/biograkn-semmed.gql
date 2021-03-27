@@ -75,8 +75,11 @@ citation sub entity,
 
 sentence sub entity,
   owns id @key,
+  owns pmid, # TODO: remove
   owns type_,
   owns number,
+  owns start-index,
+  owns end-index,
   owns text,
   owns section-header,
   owns normalized-section-header,

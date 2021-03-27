@@ -21,5 +21,6 @@ artifacts = [
     "ch.qos.logback:logback-classic",
     "info.picocli:picocli",
     "junit:junit",
+    "org.apache.commons:commons-csv",
     "org.slf4j:slf4j-api",
 ]

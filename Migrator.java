@@ -21,14 +21,19 @@ package biograkn.semmed;
 
 import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
+import biograkn.semmed.writer.SentencesWriter;
 import grakn.client.Grakn;
 import grakn.client.api.GraknClient;
 import grakn.client.api.GraknSession;
 import grakn.client.api.GraknTransaction;
 import grakn.common.collection.Either;
+import grakn.common.collection.Pair;
 import grakn.common.concurrent.NamedThreadFactory;
 import graql.lang.Graql;
 import graql.lang.query.GraqlDefine;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +52,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -59,7 +63,7 @@ import java.util.function.BiConsumer;
 import static grakn.client.api.GraknSession.Type.DATA;
 import static grakn.client.api.GraknSession.Type.SCHEMA;
 import static grakn.client.api.GraknTransaction.Type.WRITE;
-import static grakn.common.collection.Collections.map;
+import static grakn.common.collection.Collections.list;
 import static grakn.common.collection.Collections.pair;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -80,12 +84,13 @@ public class Migrator {
     private static final String SRC_ENTITIES_CSV = "ENTITIES.csv";
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final DecimalFormat decimalFormat = new DecimalFormat("#,###.00");
+    private static final CSVFormat CSV_FORMAT = CSVFormat.DEFAULT.withEscape('\\').withIgnoreSurroundingSpaces().withNullString("");
     private static int exitStatus = 0;
 
-    private static final Map<String, BiConsumer<GraknTransaction, String[]>> SRC_CSV_WRITERS = map(
+    private static final List<Pair<String, BiConsumer<GraknTransaction, String[]>>> SRC_CSV_WRITERS = list(
             pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
-            pair(SRC_CITATIONS_CSV, CitationsWriter::write)
-//            pair(SRC_SENTENCES_CSV, SentencesWriter::write),
+            pair(SRC_CITATIONS_CSV, CitationsWriter::write),
+            pair(SRC_SENTENCES_CSV, SentencesWriter::write)
 //            pair(SRC_PREDICATIONS_CSV, PredicationsWriter::write),
 //            pair(SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write),
 //            pair(SRC_ENTITIES_CSV, EntitiesWriter::write)
@@ -125,14 +130,14 @@ public class Migrator {
     }
 
     private void validate() {
-        SRC_CSV_WRITERS.keySet().forEach(file -> {
-            if (!source.resolve(file).toFile().isFile()) {
-                throw new RuntimeException("Expected " + file + " file is missing.");
+        SRC_CSV_WRITERS.forEach(pair -> {
+            if (!source.resolve(pair.first()).toFile().isFile()) {
+                throw new RuntimeException("Expected " + pair + " file is missing.");
             }
         });
         if (client.databases().contains(database)) {
             client.databases().get(database).delete();
-            // throw new RuntimeException("There already exists a database with the name '" + database + "'");
+            // TODO: throw new RuntimeException("There already exists a database with the name '" + database + "'");
         }
     }
 
@@ -147,17 +152,16 @@ public class Migrator {
         }
     }
 
-    private void run() throws FileNotFoundException, InterruptedException {
+    private void run() throws IOException, InterruptedException {
         try (GraknSession session = client.session(database, DATA)) {
-            for (Map.Entry<String, BiConsumer<GraknTransaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS.entrySet()) {
-                if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.getKey(), sourceCSVWriter.getValue());
+            for (Pair<String, BiConsumer<GraknTransaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS) {
+                if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.first(), sourceCSVWriter.second());
             }
         }
     }
 
-    private void asyncMigrate(GraknSession session, String filename,
-                              BiConsumer<GraknTransaction, String[]> writerFn)
-            throws FileNotFoundException, InterruptedException {
+    private void asyncMigrate(GraknSession session, String filename, BiConsumer<GraknTransaction, String[]> writerFn)
+            throws IOException, InterruptedException {
         info("async-migrate (start): {}", filename);
         LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
         List<CompletableFuture<Void>> asyncWrites = new ArrayList<>(parallelisation);
@@ -177,11 +181,11 @@ public class Migrator {
             Either<List<List<String[]>>, Done> queueItem;
             try {
                 while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
-                    List<List<String[]>> csvLinesGroup = queueItem.first();
-                    for (List<String[]> csvLines : csvLinesGroup) {
+                    List<List<String[]>> csvRecordsGroup = queueItem.first();
+                    for (List<String[]> csvRecords : csvRecordsGroup) {
                         try (GraknTransaction tx = session.transaction(WRITE)) {
-                            csvLines.forEach(csv -> {
-                                debug("async-writer-{}: {}", id, Arrays.toString(csv));
+                            csvRecords.forEach(csv -> {
+                                debug("async-writer-{}: {}", id, csv);
                                 writerFn.accept(tx, csv);
                             });
                             tx.commit();
@@ -201,7 +205,7 @@ public class Migrator {
     }
 
     private void bufferedRead(String filename, LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue)
-            throws InterruptedException, FileNotFoundException {
+            throws InterruptedException, IOException {
         Iterator<String> iterator = newBufferedReader(filename).lines().iterator();
         List<List<String[]>> csvLinesGroup = new ArrayList<>(batchGroup);
         List<String[]> csvLines = new ArrayList<>(batch);
@@ -246,13 +250,13 @@ public class Migrator {
         return new BufferedReader(new InputStreamReader(new FileInputStream(source.resolve(csvName).toFile())));
     }
 
-    private String[] parseCSV(String line) {
-        String[] l = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (int i = 0; i < l.length; i++) {
-            if (l[i].startsWith("\"") && l[i].endsWith("\"")) l[i] = l[i].substring(1, l[i].length() - 1);
-            if (l[i].equals("\\N") || l[i].toLowerCase().equals("null")) l[i] = null;
+    private String[] parseCSV(String line) throws IOException {
+        CSVRecord csv = CSVParser.parse(line, CSV_FORMAT).getRecords().get(0);
+        String[] arr = new String[csv.size()];
+        for (int i = 0; i < csv.size(); i++) {
+            arr[i] = csv.get(i);
         }
-        return l;
+        return arr;
     }
 
     private static String printDuration(Instant start, Instant end) {

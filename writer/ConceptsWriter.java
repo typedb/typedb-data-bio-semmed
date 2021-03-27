@@ -37,7 +37,10 @@ public class ConceptsWriter {
     public static void write(GraknTransaction tx, String[] csv) {
         assert csv.length == 3;
         if (csv[0] == null) throw new RuntimeException("Null Concept ID in csv: " + Arrays.toString(csv));
-        if (csv[1] == null) throw new RuntimeException("Null Concept CUI in csv: " + Arrays.toString(csv));
+        else if (csv[1] == null) {
+            LOG.error("Null Concept CUI in csv: " + Arrays.toString(csv));
+            return;
+        }
 
         int id = Integer.parseInt(csv[0]);
         String cui = csv[1];

@@ -40,6 +40,7 @@ java_library(
         "@graknlabs_graql//java:graql",
 
         # External dependencies from Maven
+        "@maven//:org_apache_commons_commons_csv",
         "@maven//:info_picocli_picocli",
         "@maven//:org_slf4j_slf4j_api",
     ],
