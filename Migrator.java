@@ -255,6 +255,7 @@ public class Migrator {
         String[] arr = new String[csv.size()];
         for (int i = 0; i < csv.size(); i++) {
             arr[i] = csv.get(i);
+            if (arr[i].equals("\\N") || arr[i].toLowerCase().equals("null")) arr[i] = null;
         }
         return arr;
     }
