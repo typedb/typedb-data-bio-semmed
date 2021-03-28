@@ -51,9 +51,6 @@ build:
       image: graknlabs-ubuntu-20.04-512-gb
       type: background
       timeout: "3h"
-      filter:
-        owner: graknlabs
-        branch: master
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
@@ -88,9 +85,6 @@ build:
       image: graknlabs-ubuntu-20.04-semmed
       type: background
       timeout: "3h"
-      filter:
-        owner: graknlabs
-        branch: master
       dependencies: [run-grakn-core]
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
