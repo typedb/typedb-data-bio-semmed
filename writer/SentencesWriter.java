@@ -43,7 +43,7 @@ public class SentencesWriter {
         if (csv[2] != null) sentence = sentence.has("type_", csv[2]);
         if (csv[3] != null) sentence = sentence.has("number", parseInt(csv[3]));
         if (csv[4] != null) sentence = sentence.has("start-index", parseInt(csv[4]));
-        if (csv[5] != null) sentence = sentence.has("text", truncate(csv[5], 30));
+        if (csv[5] != null) sentence = sentence.has("text", truncate(csv[5], 6));
         if (csv[6] != null) sentence = sentence.has("end-index", parseInt(csv[6]));
         if (csv[7] != null) sentence = sentence.has("section-header", csv[7]);
         if (csv[8] != null) sentence = sentence.has("normalized-section-header", csv[8]);
