@@ -28,6 +28,7 @@ import java.util.Arrays;
 
 import static biograkn.semmed.Migrator.debug;
 import static graql.lang.Graql.var;
+import static java.lang.Integer.min;
 import static java.lang.Integer.parseInt;
 
 public class SentencesWriter {
@@ -42,7 +43,7 @@ public class SentencesWriter {
         if (csv[2] != null) sentence = sentence.has("type_", csv[2]);
         if (csv[3] != null) sentence = sentence.has("number", parseInt(csv[3]));
         if (csv[4] != null) sentence = sentence.has("start-index", parseInt(csv[4]));
-        if (csv[5] != null) sentence = sentence.has("text", csv[5]);
+        if (csv[5] != null) sentence = sentence.has("text", csv[5].substring(0, min(csv[5].length(), 30)));
         if (csv[6] != null) sentence = sentence.has("end-index", parseInt(csv[6]));
         if (csv[7] != null) sentence = sentence.has("section-header", csv[7]);
         if (csv[8] != null) sentence = sentence.has("normalized-section-header", csv[8]);
