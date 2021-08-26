@@ -19,7 +19,7 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.api.GraknTransaction;
+import com.vaticle.typedb.client.api.GraknTransaction;
 import graql.lang.pattern.variable.ThingVariable;
 import graql.lang.query.GraqlInsert;
 import org.slf4j.Logger;
@@ -31,8 +31,8 @@ import java.util.Arrays;
 import java.util.Map;
 
 import static biograkn.semmed.Migrator.debug;
-import static grakn.common.collection.Collections.map;
-import static grakn.common.collection.Collections.pair;
+import static com.vaticle.typedb.common.collection.Collections.map;
+import static com.vaticle.typedb.common.collection.Collections.pair;
 import static graql.lang.Graql.insert;
 import static graql.lang.Graql.var;
 import static java.lang.Integer.parseInt;

@@ -17,10 +17,15 @@
 # under the License.
 #
 
-load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
+load("@vaticle_dependencies//distribution/artifact:rules.bzl", "native_artifact_files")
+load("@vaticle_dependencies//distribution:deployment.bzl", "deployment", "deployment_private")
 
-checkstyle_test(
-    name = "checkstyle",
-    include = glob(["*"]),
-    license_type = "apache",
-)
+def vaticle_typedb_artifacts():
+    native_artifact_files(
+        name = "vaticle_typedb_artifact",
+        group_name = "vaticle_typedb",
+        artifact_name = "typedb-server-{platform}-{version}.{ext}",
+        tag_source = deployment["artifact.release"],
+        commit_source = deployment["artifact.snapshot"],
+        commit = "d08dd7339d134018644736cd625ecc04f7b87e5b",
+    )

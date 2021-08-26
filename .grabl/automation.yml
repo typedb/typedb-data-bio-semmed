@@ -27,41 +27,41 @@ config:
 build:
   quality:
     filter:
-      owner: graknlabs
+      owner: vaticle
       branch: master
     dependency-analysis:
-      image: graknlabs-ubuntu-20.04
+      image: vaticle-ubuntu-20.04
       command: |
-        bazel run @graknlabs_dependencies//grabl/analysis:dependency-analysis
+        bazel run @vaticle_dependencies//grabl/analysis:dependency-analysis
   correctness:
 #    build:
-#      image: graknlabs-ubuntu-20.04
+#      image: vaticle-ubuntu-20.04
 #      command: |
 #        bazel build //...
-#        bazel run @graknlabs_dependencies//tool/checkstyle:test-coverage
+#        bazel run @vaticle_dependencies//tool/checkstyle:test-coverage
 #        bazel test $(bazel query 'kind(checkstyle_test, //...)') --test_output=streamed
 #    build-dependency:
-#      image: graknlabs-ubuntu-20.04
+#      image: vaticle-ubuntu-20.04
 #      command: |
 #        dependencies/maven/update.sh
 #        git diff --exit-code dependencies/maven/artifacts.snapshot
-#        bazel run @graknlabs_dependencies//tool/unuseddeps:unused-deps -- list
-    run-grakn-core:
+#        bazel run @vaticle_dependencies//tool/unuseddeps:unused-deps -- list
+    run-typedb:
       machine: 72-core-144-gb
-      image: graknlabs-ubuntu-20.04-512-gb
+      image: graknlabs-ubuntu-20.04-512-gb # TODO rename to vaticle
       type: background
       timeout: "3h"
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
-        cat > grakn-core.service <<- EOM
+        cat > typedb.service <<- EOM
         [Unit]
-        Description=Grakn Core
+        Description=TypeDB Server
 
         [Service]
         Type=simple
         Environment=SERVER_JAVAOPTS="-Xmx72G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
-        ExecStart=/home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/grakn server
+        ExecStart=/home/grabl/$GRABL_REPO/dist/typedb-all-linux/typedb server
         Restart=on-failure
         RestartSec=10
         KillMode=process
@@ -70,28 +70,28 @@ build:
         WantedBy=multi-user.target
         EOM
 
-        sudo mv grakn-core.service /etc/systemd/system/
-        bazel run //:grakn-core-extractor-linux -- dist/grakn-core-all-linux
-        cd ./dist/grakn-core-all-linux/
+        sudo mv typedb.service /etc/systemd/system/
+        bazel run //:typedb-extractor-linux -- dist/typedb-all-linux
+        cd ./dist/typedb-all-linux/
 
         sudo systemctl daemon-reload
-        sudo systemctl start grakn-core
-        export GRABL_EXPORT_GRAKN_CORE_ADDRESS="${HOSTNAME}:1729"
+        sudo systemctl start typedb-server
+        export GRABL_EXPORT_TYPEDB_SERVER_URI="${HOSTNAME}:1729"
       monitor: |
         sleep 10s
-        tail -f -n +1 /home/grabl/$GRABL_REPO/dist/grakn-core-all-linux/server/logs/grakn.log
+        tail -f -n +1 /home/grabl/$GRABL_REPO/dist/typedb-all-linux/server/logs/typedb.log
     run-biograkn-semmed:
       machine: 32-core-64-gb
-      image: graknlabs-ubuntu-20.04-semmed
+      image: graknlabs-ubuntu-20.04-semmed # TODO rename to vaticle
       type: background
       timeout: "3h"
-      dependencies: [run-grakn-core]
+      dependencies: [run-typedb-server]
       command: |
         export PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
         export JVM_OPT="-Xmx30G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=$PUBLIC_IP"
         bazel run --jvmopt="$JVM_OPT" //:migrator -- \
         --source /opt/data \
-        --grakn $GRABL_EXPORT_GRAKN_CORE_ADDRESS \
+        --typedb $GRABL_EXPORT_TYPEDB_SERVER_URI \
         --database biograkn-semmed \
         --parallelisation 1024 \
         --batch 32

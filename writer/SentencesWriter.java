@@ -19,7 +19,7 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.api.GraknTransaction;
+import com.vaticle.typedb.client.api.GraknTransaction;
 import graql.lang.Graql;
 import graql.lang.pattern.variable.ThingVariable;
 import graql.lang.query.GraqlInsert;

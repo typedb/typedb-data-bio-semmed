@@ -19,7 +19,7 @@
 
 package biograkn.semmed.writer;
 
-import grakn.client.api.GraknTransaction;
+import com.vaticle.typedb.client.api.GraknTransaction;
 
 public class PredicationsWriter {
 

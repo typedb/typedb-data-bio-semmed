@@ -22,13 +22,13 @@ package biograkn.semmed;
 import biograkn.semmed.writer.CitationsWriter;
 import biograkn.semmed.writer.ConceptsWriter;
 import biograkn.semmed.writer.SentencesWriter;
-import grakn.client.Grakn;
-import grakn.client.api.GraknClient;
-import grakn.client.api.GraknSession;
-import grakn.client.api.GraknTransaction;
-import grakn.common.collection.Either;
-import grakn.common.collection.Pair;
-import grakn.common.concurrent.NamedThreadFactory;
+import com.vaticle.typedb.client.TypeDB;
+import com.vaticle.typedb.client.api.GraknClient;
+import com.vaticle.typedb.client.api.GraknSession;
+import com.vaticle.typedb.client.api.GraknTransaction;
+import com.vaticle.typedb.common.collection.Either;
+import com.vaticle.typedb.common.collection.Pair;
+import com.vaticle.typedb.common.concurrent.NamedThreadFactory;
 import graql.lang.Graql;
 import graql.lang.query.GraqlDefine;
 import org.apache.commons.csv.CSVFormat;
@@ -60,11 +60,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
-import static grakn.client.api.GraknSession.Type.DATA;
-import static grakn.client.api.GraknSession.Type.SCHEMA;
-import static grakn.client.api.GraknTransaction.Type.WRITE;
-import static grakn.common.collection.Collections.list;
-import static grakn.common.collection.Collections.pair;
+import static com.vaticle.typedb.client.api.GraknSession.Type.DATA;
+import static com.vaticle.typedb.client.api.GraknSession.Type.SCHEMA;
+import static com.vaticle.typedb.client.api.GraknTransaction.Type.WRITE;
+import static com.vaticle.typedb.common.collection.Collections.list;
+import static com.vaticle.typedb.common.collection.Collections.pair;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
@@ -290,14 +290,14 @@ public class Migrator {
                 throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
-                LOG.info("Grakn address    : {}", options.grakn());
+                LOG.info("TypeDB address   : {}", options.typedb());
                 LOG.info("Database name    : {}", options.database());
                 LOG.info("Parallelisation  : {}", options.parallelisation());
                 LOG.info("Batch size       : {}", options.batch());
             }
 
             Migrator migrator = null;
-            try (GraknClient client = Grakn.coreClient(options.grakn(), DEFAULT_PARALLELISATION)) {
+            try (GraknClient client = Grakn.coreClient(options.typedb(), DEFAULT_PARALLELISATION)) {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
                 );

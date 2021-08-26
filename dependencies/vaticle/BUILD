@@ -17,15 +17,10 @@
 # under the License.
 #
 
-load("@graknlabs_dependencies//distribution/artifact:rules.bzl", "native_artifact_files")
-load("@graknlabs_dependencies//distribution:deployment.bzl", "deployment", "deployment_private")
+load("@vaticle_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 
-def graknlabs_grakn_core_artifacts():
-    native_artifact_files(
-        name = "graknlabs_grakn_core_artifact",
-        group_name = "graknlabs_grakn_core",
-        artifact_name = "grakn-core-server-{platform}-{version}.{ext}",
-        tag_source = deployment["artifact.release"],
-        commit_source = deployment["artifact.snapshot"],
-        commit = "42a89c9ac096614e607e1282e8f59f09657b435f",
-    )
+checkstyle_test(
+    name = "checkstyle",
+    include = glob(["*"]),
+    license_type = "apache",
+)
