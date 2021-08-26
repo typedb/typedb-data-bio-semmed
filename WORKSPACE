@@ -75,6 +75,10 @@ checkstyle_deps()
 load("@vaticle_dependencies//tool/unuseddeps:deps.bzl", unuseddeps_deps = "deps")
 unuseddeps_deps()
 
+# Load //tool/sonarcloud
+load("@vaticle_dependencies//tool/sonarcloud:deps.bzl", "sonarcloud_dependencies")
+sonarcloud_dependencies()
+
 ######################################
 # Load @vaticle_bazel_distribution #
 ######################################
@@ -88,6 +92,14 @@ rules_pkg()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
+# Load //github
+load("@vaticle_bazel_distribution//github:deps.bzl", github_deps = "deps")
+github_deps()
+
+# Load //pip
+load("@vaticle_bazel_distribution//pip:deps.bzl", pip_deps = "deps")
+pip_deps()
+
 ################################
 # Load @vaticle dependencies #
 ################################
@@ -97,7 +109,8 @@ load("//dependencies/vaticle:repositories.bzl", "vaticle_typedb_common", "vaticl
 vaticle_typedb_common()
 vaticle_typedb_client_java()
 
-load("@vaticle_typedb_client_java//dependencies/vaticle:repositories.bzl", "vaticle_typedb_common", "vaticle_typeql_lang_java", "vaticle_typedb_protocol")
+load("@vaticle_typedb_client_java//dependencies/vaticle:repositories.bzl", "vaticle_factory_tracing", "vaticle_typeql_lang_java", "vaticle_typedb_protocol")
+vaticle_factory_tracing()
 vaticle_typeql_lang_java()
 vaticle_typedb_protocol()
 
@@ -112,6 +125,7 @@ vaticle_typedb_artifacts()
 load("//dependencies/maven:artifacts.bzl", vaticle_biograkn_semmed_artifacts = "artifacts")
 load("@vaticle_typedb_common//dependencies/maven:artifacts.bzl", vaticle_typedb_common_artifacts = "artifacts")
 load("@vaticle_typedb_client_java//dependencies/maven:artifacts.bzl", vaticle_typedb_client_java_artifacts = "artifacts")
+load("@vaticle_factory_tracing//dependencies/maven:artifacts.bzl", vaticle_factory_tracing_artifacts = "artifacts")
 load("@vaticle_typeql_lang_java//dependencies/maven:artifacts.bzl", vaticle_typeql_lang_java_artifacts = "artifacts")
 load("@vaticle_typedb_protocol//dependencies/maven:artifacts.bzl", vaticle_typedb_protocol_artifacts = "artifacts")
 load("@vaticle_dependencies//tool/common:deps.bzl", vaticle_dependencies_tool_common_artifacts = "maven_artifacts")
@@ -119,8 +133,10 @@ load("@vaticle_dependencies//tool/common:deps.bzl", vaticle_dependencies_tool_co
 load("@vaticle_dependencies//library/maven:rules.bzl", "maven")
 maven(
     vaticle_biograkn_semmed_artifacts +
+    vaticle_typedb_common_artifacts +
     vaticle_typedb_client_java_artifacts +
-    vaticle_typeql_lang_java_artifacts +
     vaticle_typedb_protocol_artifacts +
+    vaticle_factory_tracing_artifacts +
+    vaticle_typeql_lang_java_artifacts +
     vaticle_dependencies_tool_common_artifacts
 )

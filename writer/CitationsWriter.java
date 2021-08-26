@@ -19,9 +19,10 @@
 
 package biograkn.semmed.writer;
 
-import com.vaticle.typedb.client.api.GraknTransaction;
-import graql.lang.pattern.variable.ThingVariable;
-import graql.lang.query.GraqlInsert;
+import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
+import com.vaticle.typeql.lang.TypeQL;
+import com.vaticle.typeql.lang.pattern.variable.ThingVariable;
+import com.vaticle.typeql.lang.query.TypeQLInsert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +34,8 @@ import java.util.Map;
 import static biograkn.semmed.Migrator.debug;
 import static com.vaticle.typedb.common.collection.Collections.map;
 import static com.vaticle.typedb.common.collection.Collections.pair;
-import static graql.lang.Graql.insert;
-import static graql.lang.Graql.var;
+import static com.vaticle.typeql.lang.TypeQL.insert;
+import static com.vaticle.typeql.lang.TypeQL.var;
 import static java.lang.Integer.parseInt;
 
 public class CitationsWriter {
@@ -80,7 +81,7 @@ public class CitationsWriter {
             pair("12", Month.DECEMBER)
     );
 
-    public static void write(GraknTransaction tx, String[] csv) {
+    public static void write(TypeDBTransaction tx, String[] csv) {
         assert csv.length == 5;
         if (csv[0] == null) throw new RuntimeException("Null Citation PMID in csv: " + Arrays.toString(csv));
 
@@ -88,7 +89,7 @@ public class CitationsWriter {
         if (csv[1] != null) citation = citation.has("issn", csv[1]);
         if (csv[3] != null) citation = citation.has("edat", parseEdat(csv[3]));
         if (csv[4] != null) citation = citation.has("pyear", parseInt(csv[4]));
-        GraqlInsert query = insert(citation);
+        TypeQLInsert query = insert(citation);
         debug("citation-writer: {}", query);
         tx.query().insert(query);
     }

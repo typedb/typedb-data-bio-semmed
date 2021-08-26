@@ -19,22 +19,22 @@
 
 package biograkn.semmed.writer;
 
-import com.vaticle.typedb.client.api.GraknTransaction;
-import graql.lang.query.GraqlInsert;
+import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
+import com.vaticle.typeql.lang.query.TypeQLInsert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
 import static biograkn.semmed.Migrator.debug;
-import static graql.lang.Graql.insert;
-import static graql.lang.Graql.var;
+import static com.vaticle.typeql.lang.TypeQL.insert;
+import static com.vaticle.typeql.lang.TypeQL.var;
 
 public class ConceptsWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConceptsWriter.class);
 
-    public static void write(GraknTransaction tx, String[] csv) {
+    public static void write(TypeDBTransaction tx, String[] csv) {
         assert csv.length == 3;
         if (csv[0] == null) throw new RuntimeException("Null Concept ID in csv: " + Arrays.toString(csv));
         else if (csv[1] == null) {
@@ -46,7 +46,7 @@ public class ConceptsWriter {
         String cui = csv[1];
         String name = csv[2];
 
-        GraqlInsert query = insert(
+        TypeQLInsert query = insert(
                 var().isa("concept").has("id", id).has("cui", cui).has("name", name)
         );
         debug("concept-writer: {}", query);
