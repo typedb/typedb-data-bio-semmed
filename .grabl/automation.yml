@@ -48,7 +48,7 @@ build:
 #        bazel run @vaticle_dependencies//tool/unuseddeps:unused-deps -- list
     run-typedb:
       machine: 72-core-144-gb
-      image: graknlabs-ubuntu-20.04-512-gb # TODO rename to vaticle
+      image: vaticle-ubuntu-20.04-512-gb
       type: background
       timeout: "3h"
       command: |
@@ -82,7 +82,7 @@ build:
         tail -f -n +1 /home/grabl/$GRABL_REPO/dist/typedb-all-linux/server/logs/typedb.log
     run-biograkn-semmed:
       machine: 32-core-64-gb
-      image: graknlabs-ubuntu-20.04-semmed # TODO rename to vaticle
+      image: vaticle-ubuntu-20.04-semmed
       type: background
       timeout: "3h"
       dependencies: [run-typedb]
