@@ -75,7 +75,7 @@ build:
         cd ./dist/typedb-all-linux/
 
         sudo systemctl daemon-reload
-        sudo systemctl start typedb-server
+        sudo systemctl start typedb
         export GRABL_EXPORT_TYPEDB_SERVER_URI="${HOSTNAME}:1729"
       monitor: |
         sleep 10s
