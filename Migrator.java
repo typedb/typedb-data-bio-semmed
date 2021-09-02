@@ -88,8 +88,8 @@ public class Migrator {
     private static int exitStatus = 0;
 
     private static final List<Pair<String, BiConsumer<TypeDBTransaction, String[]>>> SRC_CSV_WRITERS = list(
-            pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
-            pair(SRC_CITATIONS_CSV, CitationsWriter::write),
+//            pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
+//            pair(SRC_CITATIONS_CSV, CitationsWriter::write),
             pair(SRC_SENTENCES_CSV, SentencesWriter::write)
 //            pair(SRC_PREDICATIONS_CSV, PredicationsWriter::write),
 //            pair(SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write),
