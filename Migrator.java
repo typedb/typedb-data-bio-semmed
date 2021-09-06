@@ -17,20 +17,18 @@
  * under the License.
  */
 
-package biograkn.semmed;
+package com.vaticle.typedb.data.bio.semmed;
 
-import biograkn.semmed.writer.CitationsWriter;
-import biograkn.semmed.writer.ConceptsWriter;
-import biograkn.semmed.writer.SentencesWriter;
-import grakn.client.Grakn;
-import grakn.client.api.GraknClient;
-import grakn.client.api.GraknSession;
-import grakn.client.api.GraknTransaction;
-import grakn.common.collection.Either;
-import grakn.common.collection.Pair;
-import grakn.common.concurrent.NamedThreadFactory;
-import graql.lang.Graql;
-import graql.lang.query.GraqlDefine;
+import com.vaticle.typedb.data.bio.semmed.writer.SentencesWriter;
+import com.vaticle.typedb.client.TypeDB;
+import com.vaticle.typedb.client.api.connection.TypeDBClient;
+import com.vaticle.typedb.client.api.connection.TypeDBSession;
+import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
+import com.vaticle.typedb.common.collection.Either;
+import com.vaticle.typedb.common.collection.Pair;
+import com.vaticle.typedb.common.concurrent.NamedThreadFactory;
+import com.vaticle.typeql.lang.TypeQL;
+import com.vaticle.typeql.lang.query.TypeQLDefine;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -60,11 +58,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
-import static grakn.client.api.GraknSession.Type.DATA;
-import static grakn.client.api.GraknSession.Type.SCHEMA;
-import static grakn.client.api.GraknTransaction.Type.WRITE;
-import static grakn.common.collection.Collections.list;
-import static grakn.common.collection.Collections.pair;
+import static com.vaticle.typedb.client.api.connection.TypeDBSession.Type.DATA;
+import static com.vaticle.typedb.client.api.connection.TypeDBSession.Type.SCHEMA;
+import static com.vaticle.typedb.client.api.connection.TypeDBTransaction.Type.WRITE;
+import static com.vaticle.typedb.common.collection.Collections.list;
+import static com.vaticle.typedb.common.collection.Collections.pair;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Migrator {
@@ -72,10 +70,10 @@ public class Migrator {
     public static final int DEFAULT_WRITE_BATCH_SIZE = 64;
     public static final int DEFAULT_READ_BATCH_SIZE = 512;
     public static final int DEFAULT_PARALLELISATION = Runtime.getRuntime().availableProcessors();
-    public static final String DEFAULT_DATABASE_NAME = "biograkn-semmed";
+    public static final String DEFAULT_DATABASE_NAME = "bio-semmed";
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
-    private static final String SCHEMA_GQL = "schema/biograkn-semmed.gql";
+    private static final String SCHEMA_GQL = "schema/bio-semmed.gql";
     private static final String SRC_CONCEPTS_CSV = "CONCEPTS.csv";
     private static final String SRC_CITATIONS_CSV = "CITATIONS.csv";
     private static final String SRC_SENTENCES_CSV = "SENTENCES.csv";
@@ -87,9 +85,9 @@ public class Migrator {
     private static final CSVFormat CSV_FORMAT = CSVFormat.DEFAULT.withEscape('\\').withIgnoreSurroundingSpaces().withNullString("");
     private static int exitStatus = 0;
 
-    private static final List<Pair<String, BiConsumer<GraknTransaction, String[]>>> SRC_CSV_WRITERS = list(
-            pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
-            pair(SRC_CITATIONS_CSV, CitationsWriter::write),
+    private static final List<Pair<String, BiConsumer<TypeDBTransaction, String[]>>> SRC_CSV_WRITERS = list(
+//            pair(SRC_CONCEPTS_CSV, ConceptsWriter::write),
+//            pair(SRC_CITATIONS_CSV, CitationsWriter::write),
             pair(SRC_SENTENCES_CSV, SentencesWriter::write)
 //            pair(SRC_PREDICATIONS_CSV, PredicationsWriter::write),
 //            pair(SRC_PREDICATIONS_AUX_CSV, PredicationsWriter::write),
@@ -98,14 +96,14 @@ public class Migrator {
 
     private final AtomicBoolean hasError;
     private final ExecutorService executor;
-    private final GraknClient client;
+    private final TypeDBClient client;
     private final String database;
     private final Path source;
     private final int parallelisation;
     private final int batch;
     private final int batchGroup;
 
-    public Migrator(GraknClient client, String database, Path source, int parallelisation, int batch) {
+    public Migrator(TypeDBClient client, String database, Path source, int parallelisation, int batch) {
         assert parallelisation < DEFAULT_PARALLELISATION;
         this.client = client;
         this.database = database;
@@ -143,9 +141,9 @@ public class Migrator {
 
     private void initialise() throws IOException {
         client.databases().create(database);
-        try (GraknSession session = client.session(database, SCHEMA)) {
-            try (GraknTransaction transaction = session.transaction(WRITE)) {
-                GraqlDefine schema = Graql.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_GQL)), UTF_8));
+        try (TypeDBSession session = client.session(database, SCHEMA)) {
+            try (TypeDBTransaction transaction = session.transaction(WRITE)) {
+                TypeQLDefine schema = TypeQL.parseQuery(new String(Files.readAllBytes(Paths.get(SCHEMA_GQL)), UTF_8));
                 transaction.query().define(schema);
                 transaction.commit();
             }
@@ -153,14 +151,14 @@ public class Migrator {
     }
 
     private void run() throws IOException, InterruptedException {
-        try (GraknSession session = client.session(database, DATA)) {
-            for (Pair<String, BiConsumer<GraknTransaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS) {
+        try (TypeDBSession session = client.session(database, DATA)) {
+            for (Pair<String, BiConsumer<TypeDBTransaction, String[]>> sourceCSVWriter : SRC_CSV_WRITERS) {
                 if (!hasError.get()) asyncMigrate(session, sourceCSVWriter.first(), sourceCSVWriter.second());
             }
         }
     }
 
-    private void asyncMigrate(GraknSession session, String filename, BiConsumer<GraknTransaction, String[]> writerFn)
+    private void asyncMigrate(TypeDBSession session, String filename, BiConsumer<TypeDBTransaction, String[]> writerFn)
             throws IOException, InterruptedException {
         info("async-migrate (start): {}", filename);
         LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue = new LinkedBlockingQueue<>(parallelisation * 4);
@@ -173,9 +171,9 @@ public class Migrator {
         info("async-migrate (end): {}", filename);
     }
 
-    private CompletableFuture<Void> asyncWrite(int id, String filename, GraknSession session,
+    private CompletableFuture<Void> asyncWrite(int id, String filename, TypeDBSession session,
                                                LinkedBlockingQueue<Either<List<List<String[]>>, Done>> queue,
-                                               BiConsumer<GraknTransaction, String[]> writerFn) {
+                                               BiConsumer<TypeDBTransaction, String[]> writerFn) {
         return CompletableFuture.runAsync(() -> {
             debug("async-writer-{} (start): {}", id, filename);
             Either<List<List<String[]>>, Done> queueItem;
@@ -183,7 +181,7 @@ public class Migrator {
                 while ((queueItem = queue.take()).isFirst() && !hasError.get()) {
                     List<List<String[]>> csvRecordsGroup = queueItem.first();
                     for (List<String[]> csvRecords : csvRecordsGroup) {
-                        try (GraknTransaction tx = session.transaction(WRITE)) {
+                        try (TypeDBTransaction tx = session.transaction(WRITE)) {
                             csvRecords.forEach(csv -> {
                                 debug("async-writer-{}: {}", id, csv);
                                 writerFn.accept(tx, csv);
@@ -290,14 +288,14 @@ public class Migrator {
                 throw new RuntimeException("Invalid batch size: has to be greater than 0");
             } else {
                 LOG.info("Source directory : {}", options.source().toString());
-                LOG.info("Grakn address    : {}", options.grakn());
+                LOG.info("TypeDB address   : {}", options.typedb());
                 LOG.info("Database name    : {}", options.database());
                 LOG.info("Parallelisation  : {}", options.parallelisation());
                 LOG.info("Batch size       : {}", options.batch());
             }
 
             Migrator migrator = null;
-            try (GraknClient client = Grakn.coreClient(options.grakn(), DEFAULT_PARALLELISATION)) {
+            try (TypeDBClient client = TypeDB.coreClient(options.typedb(), DEFAULT_PARALLELISATION)) {
                 Runtime.getRuntime().addShutdownHook(
                         NamedThreadFactory.create(Migrator.class, "shutdown").newThread(client::close)
                 );

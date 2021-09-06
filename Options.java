@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package biograkn.semmed;
+package com.vaticle.typedb.data.bio.semmed;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -27,7 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-@Command(name = "biograkn-semmed", mixinStandardHelpOptions = true)
+@Command(name = "bio-semmed", mixinStandardHelpOptions = true)
 public class Options {
 
     @Option(descriptionKey = "source",
@@ -36,11 +36,11 @@ public class Options {
             description = "Directory in which source CSV data files located in")
     private String source;
 
-    @Option(descriptionKey = "grakn",
-            names = {"-g", "--grakn"},
+    @Option(descriptionKey = "typedb",
+            names = {"-g", "--typedb"},
             required = true,
-            description = "Grakn server address {host:port}")
-    private String grakn;
+            description = "TypeDB server address {host:port}")
+    private String typedb;
 
     @Option(descriptionKey = "database",
             names = {"-d", "--database"},
@@ -88,8 +88,8 @@ public class Options {
         return Paths.get(source);
     }
 
-    public String grakn() {
-        return grakn;
+    public String typedb() {
+        return typedb;
     }
 
     public String database() {

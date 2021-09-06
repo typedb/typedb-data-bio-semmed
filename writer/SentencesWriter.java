@@ -17,23 +17,23 @@
  * under the License.
  */
 
-package biograkn.semmed.writer;
+package com.vaticle.typedb.data.bio.semmed.writer;
 
-import grakn.client.api.GraknTransaction;
-import graql.lang.Graql;
-import graql.lang.pattern.variable.ThingVariable;
-import graql.lang.query.GraqlInsert;
+import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
+import com.vaticle.typeql.lang.pattern.variable.ThingVariable;
+import com.vaticle.typeql.lang.query.TypeQLInsert;
 
 import java.util.Arrays;
 
-import static biograkn.semmed.Migrator.debug;
-import static graql.lang.Graql.var;
+import static com.vaticle.typedb.data.bio.semmed.Migrator.debug;
+import static com.vaticle.typeql.lang.TypeQL.insert;
+import static com.vaticle.typeql.lang.TypeQL.var;
 import static java.lang.Integer.min;
 import static java.lang.Integer.parseInt;
 
 public class SentencesWriter {
 
-    public static void write(GraknTransaction tx, String[] csv) {
+    public static void write(TypeDBTransaction tx, String[] csv) {
         assert csv.length == 9;
         if (csv[0] == null) throw new RuntimeException("Null Sentence ID in CSV: " + Arrays.toString(csv));
         if (csv[1] == null) throw new RuntimeException("Null Citation PMID in CSV: " + Arrays.toString(csv));
@@ -48,7 +48,7 @@ public class SentencesWriter {
         if (csv[7] != null) sentence = sentence.has("section-header", csv[7]);
         if (csv[8] != null) sentence = sentence.has("normalized-section-header", csv[8]);
 
-        GraqlInsert query = Graql.insert(sentence);
+        TypeQLInsert query = insert(sentence);
         debug("sentences-writer: {}", query);
         tx.query().insert(query);
     }

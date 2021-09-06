@@ -17,14 +17,14 @@
 # under the License.
 #
 
-load("@graknlabs_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
-load("@graknlabs_bazel_distribution//artifact:rules.bzl", "artifact_extractor")
+load("@vaticle_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
+load("@vaticle_bazel_distribution//artifact:rules.bzl", "artifact_extractor")
 
 exports_files(["VERSION", "LICENSE", "README.md"])
 
 artifact_extractor(
-    name = "grakn-core-extractor-linux",
-    artifact = "@graknlabs_grakn_core_artifact_linux//file",
+    name = "typedb-extractor-linux",
+    artifact = "@vaticle_typedb_artifact_linux//file",
 )
 
 java_library(
@@ -32,12 +32,12 @@ java_library(
     srcs = glob(["*.java", "writer/*.java"]),
     deps = [
         # External dependencies from Grakn Labs
-        "@graknlabs_common//:common",
-        "@graknlabs_client_java//api:api",
-        "@graknlabs_client_java//:client-java",
-        "@graknlabs_graql//java/query:query",
-        "@graknlabs_graql//java/pattern:pattern",
-        "@graknlabs_graql//java:graql",
+        "@vaticle_typedb_common//:common",
+        "@vaticle_typedb_client_java//api:api",
+        "@vaticle_typedb_client_java//:client-java",
+        "@vaticle_typeql_lang_java//:typeql-lang",
+        "@vaticle_typeql_lang_java//pattern:pattern",
+        "@vaticle_typeql_lang_java//query:query",
 
         # External dependencies from Maven
         "@maven//:org_apache_commons_commons_csv",
@@ -48,11 +48,11 @@ java_library(
 
 java_binary(
     name = "migrator",
-    main_class = "biograkn.semmed.Migrator",
+    main_class = "com.vaticle.typedb.data.bio.semmed.Migrator",
     runtime_deps = [":migrator-src"],
-    tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
+    tags = ["maven_coordinates=com.vaticle.typedb.data:bio-semmed:{pom_version}"],
     resources = [ "//conf:logback.xml" ],
-    data = ["//schema:biograkn-semmed.gql"],
+    data = ["//schema:bio-semmed.gql"],
     resource_strip_prefix = "conf/",
 )
 

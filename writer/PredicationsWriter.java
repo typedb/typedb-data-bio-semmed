@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package biograkn.semmed.writer;
+package com.vaticle.typedb.data.bio.semmed.writer;
 
-import grakn.client.api.GraknTransaction;
+import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
 
 public class PredicationsWriter {
 
-    public static void write(GraknTransaction tx, String[] csv) {
+    public static void write(TypeDBTransaction tx, String[] csv) {
         // TODO
     }
 }

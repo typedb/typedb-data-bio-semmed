@@ -19,23 +19,23 @@
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-def graknlabs_dependencies():
+def vaticle_dependencies():
     git_repository(
-        name = "graknlabs_dependencies",
-        remote = "https://github.com/graknlabs/dependencies",
-        commit = "97f2a962fb1f887d03eae89e81146b8684fdc24f",  # sync-marker: do not remove this comment, this is used for sync-dependencies by @graknlabs_dependencies
+        name = "vaticle_dependencies",
+        remote = "https://github.com/vaticle/dependencies",
+        commit = "69d1fb1f0398b285b51b46391c5b2de45b13789b",  # sync-marker: do not remove this comment, this is used for sync-dependencies by @vaticle_dependencies
     )
 
-def graknlabs_common():
+def vaticle_typedb_common():
     git_repository(
-        name = "graknlabs_common",
-        remote = "https://github.com/graknlabs/common",
-        commit = "82d287bd187be1defa8bf841a2313af523bbb075", # sync-marker: do not remove this comment, this is used for sync-dependencies by @graknlabs_common
+        name = "vaticle_typedb_common",
+        remote = "https://github.com/vaticle/typedb-common",
+        commit = "da769999d04403dc9f2385654e700dd74be68ff3", # sync-marker: do not remove this comment, this is used for sync-dependencies by @vaticle_typedb_common
     )
 
-def graknlabs_client_java():
+def vaticle_typedb_client_java():
     git_repository(
-        name = "graknlabs_client_java",
-        remote = "https://github.com/haikalpribadi/client-java",
-        commit = "4ffc1ef31d4dd23a27fce16fe6a3ad15a9dbfda8",  # sync-marker: do not remove this comment, this is used for sync-dependencies by @graknlabs_client_java
+        name = "vaticle_typedb_client_java",
+        remote = "https://github.com/vaticle/typedb-client-java",
+        commit = "1e691bed4dc5fd66fcb35e0483ffb5d76f8302d6",  # sync-marker: do not remove this comment, this is used for sync-dependencies by @vaticle_typedb_client_java
     )
