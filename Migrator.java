@@ -312,7 +312,7 @@ public class Migrator {
             exitStatus = 1;
         } finally {
             Instant end = Instant.now();
-            LOG.info("BioGrakn SemMed Migrator completed in: {}", printDuration(start, end));
+            LOG.info("TypeDB Data - Bio SemMed migrator completed in: {}", printDuration(start, end));
             System.exit(exitStatus);
         }
     }

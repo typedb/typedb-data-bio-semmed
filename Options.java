@@ -45,7 +45,7 @@ public class Options {
     @Option(descriptionKey = "database",
             names = {"-d", "--database"},
             required = true,
-            description = "The database name to create in the Grakn server")
+            description = "The database name to create in the TypeDB server")
     private String database;
 
     @Option(descriptionKey = "parallelisation",

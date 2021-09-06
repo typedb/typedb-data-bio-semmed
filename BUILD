@@ -31,7 +31,7 @@ java_library(
     name = "migrator-src",
     srcs = glob(["*.java", "writer/*.java"]),
     deps = [
-        # External dependencies from Grakn Labs
+        # External dependencies from Vaticle
         "@vaticle_typedb_common//:common",
         "@vaticle_typedb_client_java//api:api",
         "@vaticle_typedb_client_java//:client-java",

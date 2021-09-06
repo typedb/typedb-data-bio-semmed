@@ -1,1 +1,1 @@
-# BioGrakn SemMedDB Dataset
+# TypeDB Data - Bio SemMed Dataset
