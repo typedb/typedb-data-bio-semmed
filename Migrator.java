@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package biograkn.semmed;
+package com.vaticle.typedb.data.bio.semmed;
 
-import biograkn.semmed.writer.CitationsWriter;
-import biograkn.semmed.writer.ConceptsWriter;
-import biograkn.semmed.writer.SentencesWriter;
+import com.vaticle.typedb.data.bio.semmed.writer.SentencesWriter;
 import com.vaticle.typedb.client.TypeDB;
 import com.vaticle.typedb.client.api.connection.TypeDBClient;
 import com.vaticle.typedb.client.api.connection.TypeDBSession;
@@ -72,10 +70,10 @@ public class Migrator {
     public static final int DEFAULT_WRITE_BATCH_SIZE = 64;
     public static final int DEFAULT_READ_BATCH_SIZE = 512;
     public static final int DEFAULT_PARALLELISATION = Runtime.getRuntime().availableProcessors();
-    public static final String DEFAULT_DATABASE_NAME = "biograkn-semmed";
+    public static final String DEFAULT_DATABASE_NAME = "bio-semmed";
 
     private static final Logger LOG = LoggerFactory.getLogger(Migrator.class);
-    private static final String SCHEMA_GQL = "schema/biograkn-semmed.gql";
+    private static final String SCHEMA_GQL = "schema/bio-semmed.gql";
     private static final String SRC_CONCEPTS_CSV = "CONCEPTS.csv";
     private static final String SRC_CITATIONS_CSV = "CITATIONS.csv";
     private static final String SRC_SENTENCES_CSV = "SENTENCES.csv";

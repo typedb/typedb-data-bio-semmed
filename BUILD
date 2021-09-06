@@ -48,11 +48,11 @@ java_library(
 
 java_binary(
     name = "migrator",
-    main_class = "biograkn.semmed.Migrator",
+    main_class = "com.vaticle.typedb.data.bio.semmed.Migrator",
     runtime_deps = [":migrator-src"],
-    tags = ["maven_coordinates=io.grakn.biograkn:biograkn-semmed:{pom_version}"],
+    tags = ["maven_coordinates=com.vaticle.typedb.data:bio-semmed:{pom_version}"],
     resources = [ "//conf:logback.xml" ],
-    data = ["//schema:biograkn-semmed.gql"],
+    data = ["//schema:bio-semmed.gql"],
     resource_strip_prefix = "conf/",
 )
 

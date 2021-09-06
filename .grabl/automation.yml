@@ -80,7 +80,7 @@ build:
       monitor: |
         sleep 10s
         tail -f -n +1 /home/grabl/$GRABL_REPO/dist/typedb-server-linux/server/logs/typedb.log
-    run-biograkn-semmed:
+    run-typedb-data-bio-semmed:
       machine: 32-core-64-gb
       image: vaticle-ubuntu-20.04-semmed
       type: background
@@ -92,6 +92,6 @@ build:
         bazel run --jvmopt="$JVM_OPT" //:migrator -- \
         --source /opt/data \
         --typedb $GRABL_EXPORT_TYPEDB_SERVER_URI \
-        --database biograkn-semmed \
+        --database bio-semmed \
         --parallelisation 1024 \
         --batch 32

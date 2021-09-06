@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package biograkn.semmed;
+package com.vaticle.typedb.data.bio.semmed;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -27,7 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-@Command(name = "biograkn-semmed", mixinStandardHelpOptions = true)
+@Command(name = "bio-semmed", mixinStandardHelpOptions = true)
 public class Options {
 
     @Option(descriptionKey = "source",

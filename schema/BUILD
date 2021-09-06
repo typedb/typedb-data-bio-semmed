@@ -19,7 +19,7 @@
 
 load("@vaticle_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 
-exports_files(["biograkn-semmed.gql"])
+exports_files(["bio-semmed.gql"])
 
 checkstyle_test(
     name = "checkstyle",

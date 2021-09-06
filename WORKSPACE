@@ -17,7 +17,7 @@
 # under the License.
 #
 
-workspace(name = "vaticle_biograkn_semmed")
+workspace(name = "vaticle_typedb_data_bio_semmed")
 
 ################################
 # Load @vaticle_dependencies #
@@ -122,7 +122,7 @@ load("//dependencies/vaticle:artifacts.bzl", "vaticle_typedb_artifacts")
 vaticle_typedb_artifacts()
 
 # Load maven
-load("//dependencies/maven:artifacts.bzl", vaticle_biograkn_semmed_artifacts = "artifacts")
+load("//dependencies/maven:artifacts.bzl", vaticle_typedb_data_bio_semmed_artifacts = "artifacts")
 load("@vaticle_typedb_common//dependencies/maven:artifacts.bzl", vaticle_typedb_common_artifacts = "artifacts")
 load("@vaticle_typedb_client_java//dependencies/maven:artifacts.bzl", vaticle_typedb_client_java_artifacts = "artifacts")
 load("@vaticle_factory_tracing//dependencies/maven:artifacts.bzl", vaticle_factory_tracing_artifacts = "artifacts")
@@ -132,7 +132,7 @@ load("@vaticle_dependencies//tool/common:deps.bzl", vaticle_dependencies_tool_co
 
 load("@vaticle_dependencies//library/maven:rules.bzl", "maven")
 maven(
-    vaticle_biograkn_semmed_artifacts +
+    vaticle_typedb_data_bio_semmed_artifacts +
     vaticle_typedb_common_artifacts +
     vaticle_typedb_client_java_artifacts +
     vaticle_typedb_protocol_artifacts +

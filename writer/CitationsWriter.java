@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package biograkn.semmed.writer;
+package com.vaticle.typedb.data.bio.semmed.writer;
 
 import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
 import com.vaticle.typeql.lang.TypeQL;
@@ -31,7 +31,7 @@ import java.time.Month;
 import java.util.Arrays;
 import java.util.Map;
 
-import static biograkn.semmed.Migrator.debug;
+import static com.vaticle.typedb.data.bio.semmed.Migrator.debug;
 import static com.vaticle.typedb.common.collection.Collections.map;
 import static com.vaticle.typedb.common.collection.Collections.pair;
 import static com.vaticle.typeql.lang.TypeQL.insert;

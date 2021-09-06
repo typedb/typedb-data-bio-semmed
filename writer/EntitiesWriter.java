@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package biograkn.semmed.writer;
+package com.vaticle.typedb.data.bio.semmed.writer;
 
 import com.vaticle.typedb.client.api.connection.TypeDBTransaction;
 
